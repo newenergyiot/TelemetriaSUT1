@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>NewEnergy | Secure Login</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  
   <style>
     :root {
       --bg-dark: #0b0f1b;
@@ -28,13 +27,13 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
-      overflow: hidden;
+      padding: 15px;
     }
 
     .card {
       background: var(--card-bg);
       border-radius: 24px;
-      padding: 40px;
+      padding: 35px 25px;
       width: 100%;
       max-width: 380px;
       box-shadow: 0 25px 50px rgba(0,0,0,0.6);
@@ -62,7 +61,7 @@
     p {
       color: var(--text-muted);
       font-size: 14px;
-      margin-bottom: 30px;
+      margin-bottom: 25px;
     }
 
     .input-group {
@@ -80,7 +79,7 @@
 
     input {
       width: 100%;
-      padding: 14px 16px;
+      padding: 16px 16px;
       margin-top: 5px;
       background: rgba(0,0,0,0.2);
       border: 1px solid rgba(255,255,255,0.1);
@@ -126,18 +125,24 @@
       background: rgba(255, 87, 34, 0.1);
       padding: 10px;
       border-radius: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       display: none;
     }
 
     .footer-note {
-      margin-top: 30px;
+      margin-top: 25px;
       font-size: 11px;
       color: var(--text-muted);
     }
+
+    @media (max-width: 400px){
+      h1 { font-size: 24px; }
+      input { padding: 14px; font-size: 14px; }
+      button { padding: 14px; font-size: 15px; }
+    }
   </style>
 
-  <!-- Firebase compat -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
@@ -160,7 +165,7 @@
       <input type="password" id="password" placeholder="••••••••">
     </div>
 
-    <button id="btnLogin">Autenticar Sistema</button>
+    <button type="button" id="btnLogin">Autenticar Sistema</button>
 
     <div class="footer-note">
       Sistema Protegido • NewEnergy v2.0
@@ -168,7 +173,7 @@
   </div>
 
   <script>
-    // Configuração Firebase TelemetriaSUT1
+    // Config Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
       authDomain: "telemetriasut1.firebaseapp.com",
@@ -178,7 +183,6 @@
       messagingSenderId: "591416281880",
       appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
     };
-
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
 
@@ -193,13 +197,10 @@
     });
 
     btnLogin.addEventListener("click", () => {
-      const email = emailEl.value;
-      const pass = passEl.value;
+      const email = emailEl.value.trim();
+      const pass = passEl.value.trim();
 
-      if(!email || !pass) {
-        showError("Preencha todos os campos.");
-        return;
-      }
+      if(!email || !pass) { showError("Preencha todos os campos."); return; }
 
       btnLogin.innerText = "Verificando...";
       btnLogin.disabled = true;
@@ -210,12 +211,12 @@
         .catch(err => { 
           btnLogin.innerText = "Autenticar Sistema";
           btnLogin.disabled = false;
-          showError("Credenciais inválidas ou erro de conexão."); 
-          console.error("Erro de login:", err);
+          showError("Credenciais inválidas ou erro de conexão.");
+          console.error("Erro de login:", err.message);
         });
     });
 
-    function showError(msg) {
+    function showError(msg){
       errorEl.textContent = msg;
       errorEl.style.display = "block";
     }
@@ -224,5 +225,6 @@
       if(e.key === "Enter") btnLogin.click();
     });
   </script>
+
 </body>
 </html>
