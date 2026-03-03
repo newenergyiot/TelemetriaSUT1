@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NewEnergy | Painel Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg-dark:#0b0f1b;--card-bg:#161b2d;--accent:#00d2ff;--accent-hover:#0099cc;--text-main:#fff;--text-muted:#8fa3c6;}
+body{margin:0;font-family:'Inter',sans-serif;background:var(--bg-dark);color:var(--text-main);display:flex;flex-direction:column;align-items:center;min-height:100vh;}
+header{width:100%;padding:20px;background:var(--card-bg);text-align:center;font-size:24px;font-weight:800;box-shadow:0 4px 10px rgba(0,0,0,0.3);}
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:20px;padding:20px;width:100%;max-width:800px;}
+.card{background:var(--card-bg);padding:20px;border-radius:20px;text-align:center;width:100%;box-shadow:0 10px 20px rgba(0,0,0,0.3);}
+input,select{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none;background:rgba(0,0,0,0.2);color:#fff;}
+button{padding:10px 20px;background:var(--accent);border:none;border-radius:12px;color:#0b0f1b;cursor:pointer;font-weight:700;transition:0.3s;margin-top:5px;}
+button:hover{background:var(--accent-hover);}
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<header>NewEnergy | Painel Master</header>
+<main>
+  <div class="card">
+    <h2>Adicionar Cliente</h2>
+    <input type="email" id="newEmail" placeholder="Email do cliente">
+    <input type="password" id="newPass" placeholder="Senha do cliente">
+    <button onclick="addCliente()">Adicionar Cliente</button>
+  </div>
+
+  <div class="card">
+    <h2>Gerenciar Sensores</h2>
+    <select id="selectCliente"></select>
+    <input type="text" id="sensorName" placeholder="Nome do Sensor">
+    <button onclick="addSensor()">Adicionar Sensor</button>
+    <button onclick="removeSensor()">Remover Sensor</button>
+  </div>
+</main>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+  authDomain: "telemetriasut1.firebaseapp.com",
+  databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+  projectId: "telemetriasut1",
+  storageBucket: "telemetriasut1.firebasestorage.app",
+  messagingSenderId: "591416281880",
+  appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const selectCliente = document.getElementById("selectCliente");
+
+// Só permitir o admin
+auth.onAuthStateChanged(user=>{
+  if(!user || user.email!="newenergy.iot@gmail.com") window.location.href="index.html";
+  else loadClientes();
+});
+
+// Adicionar cliente
+function addCliente(){
+  const email=document.getElementById("newEmail").value;
+  const pass=document.getElementById("newPass").value;
+  if(!email||!pass)return alert("Preencha todos os campos");
+  auth.createUserWithEmailAndPassword(email,pass)
+    .then(res=>{
+      const uid=res.user.uid;
+      db.ref("/clientes/"+uid).set({cliente01:{temp:0,hum:0,dist:0}});
+      alert("Cliente adicionado com sucesso");
+      loadClientes();
+    }).catch(e=>alert("Erro: "+e.message));
+}
+
+// Carregar clientes
+function loadClientes(){
+  db.ref("/clientes").once("value",snap=>{
+    selectCliente.innerHTML="";
+    snap.forEach(c=>{
+      const opt=document.createElement("option");
+      opt.value=c.key;
+      opt.textContent=c.key;
+      selectCliente.appendChild(opt);
+    });
+  });
+}
+
+// Adicionar sensor
+function addSensor(){
+  const uid=selectCliente.value;
+  const sensor=document.getElementById("sensorName").value.trim();
+  if(!uid||!sensor)return alert("Selecione cliente e sensor");
+  db.ref("/clientes/"+uid+"/"+sensor).set({temp:0,hum:0,dist:0});
+  alert("Sensor adicionado");
+}
+
+// Remover sensor
+function removeSensor(){
+  const uid=selectCliente.value;
+  const sensor=document.getElementById("sensorName").value.trim();
+  if(!uid||!sensor)return alert("Selecione cliente e sensor");
+  db.ref("/clientes/"+uid+"/"+sensor).remove();
+  alert("Sensor removido");
+}
+</script>
+</body>
+</html>
