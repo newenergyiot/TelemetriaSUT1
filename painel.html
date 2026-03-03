@@ -1,84 +1,139 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NewEnergy | Painel Cliente</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg-dark:#0b0f1b; --card-bg:#161b2d; --accent:#00d2ff; --accent-hover:#0099cc; --text-main:#fff; --text-muted:#8fa3c6;
-}
-body {margin:0;font-family:'Inter',sans-serif;background:var(--bg-dark);color:var(--text-main);display:flex;flex-direction:column;align-items:center;min-height:100vh;}
-header{width:100%;padding:20px;background:var(--card-bg);text-align:center;font-size:24px;font-weight:800;box-shadow:0 4px 10px rgba(0,0,0,0.3);}
-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:20px;}
-.card{background:var(--card-bg);padding:30px;border-radius:20px;text-align:center;width:300px;box-shadow:0 10px 20px rgba(0,0,0,0.3);}
-.card h2{margin:0 0 10px;}
-.card p{margin:5px 0;font-size:18px;}
-.button-group{display:flex;gap:10px;justify-content:center;margin-top:10px;}
-.button-group button{padding:10px 20px;background:var(--accent);border:none;border-radius:12px;color:#0b0f1b;cursor:pointer;font-weight:700;transition:0.3s;}
-.button-group button:hover{background:var(--accent-hover);}
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NewEnergy | Monitor Pro Intelligence</title>
+<!-- CSS e estilos omitidos por brevidade, use os que você já tem -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gaugeJS/dist/gauge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
-<header>NewEnergy | Painel Cliente</header>
-<main>
-  <div class="card">
-    <h2>Dados do Sensor</h2>
-    <p>Sensor 1 - Distância: <span id="distancia1">--</span> cm</p>
-    <p>Sensor 1 - Temperatura: <span id="temperatura1">--</span> °C</p>
-    <p>Sensor 1 - Umidade: <span id="umidade1">--</span> %</p>
-    <!-- Adicione mais sensores aqui -->
+<div class="card">
+  <div id="masterPanel" style="display:none;">
+    <h2>Painel Master</h2>
+    <select id="selectCliente"></select>
+    <button onclick="abrirCliente()">Abrir Cliente</button>
   </div>
 
-  <div class="button-group">
-    <button onclick="window.location.href='historico.html'">Ver Histórico</button>
-    <button onclick="logout()">Sair</button>
+  <div id="clientePanel" style="display:none;">
+    <h2>Painel Cliente</h2>
+    <div class="status-container">
+      <div id="status" class="status-badge st-online"><div class="dot"></div>SINCRONIZANDO...</div>
+    </div>
+
+    <div class="gauges-container">
+      <div class="gauge-box">
+        <div class="g-title">Temperatura</div>
+        <canvas id="gTemp"></canvas>
+        <div id="tempVal" class="g-value" style="color:var(--off)">--°C</div>
+      </div>
+      <div class="gauge-box">
+        <div class="g-title">Umidade</div>
+        <canvas id="gHum"></canvas>
+        <div id="humVal" class="g-value" style="color:var(--accent)">--%</div>
+      </div>
+    </div>
+
+    <button id="btnLED" class="btn-action btn-led off">Sincronizando LED...</button>
+    <button class="btn-action btn-history" onclick="location.href='historico.html'">Relatórios Avançados</button>
   </div>
-</main>
+
+  <button class="btn-logout" onclick="fazerLogout()">Logout</button>
+</div>
 
 <script>
-const firebaseConfig = {
+emailjs.init("W2__8f2fBoqRPX9hX");
+
+firebase.initializeApp({
   apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
   authDomain: "telemetriasut1.firebaseapp.com",
   databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-  projectId: "telemetriasut1",
-  storageBucket: "telemetriasut1.firebasestorage.app",
-  messagingSenderId: "591416281880",
-  appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
-};
-firebase.initializeApp(firebaseConfig);
+  projectId: "telemetriasut1"
+});
 const auth = firebase.auth();
 const db = firebase.database();
 
-// Elementos HTML
-const distancia1 = document.getElementById("distancia1");
-const temperatura1 = document.getElementById("temperatura1");
-const umidade1 = document.getElementById("umidade1");
+let gT, gH;
+const masterEmail = "newenergy.iot@gmail.com"; // email master
 
-// Redireciona se não estiver logado
 auth.onAuthStateChanged(user => {
-  if(!user) window.location.href="index.html";
-  else listenSensores(user.uid);
+  if(!user) { window.location.href = "index.html"; return; }
+
+  if(user.email === masterEmail) {
+    document.getElementById("masterPanel").style.display = "block";
+    carregarClientes();
+  } else {
+    document.getElementById("clientePanel").style.display = "block";
+    rodarDashboard(user.uid); // painel do cliente
+  }
 });
 
-// Função para escutar sensores do cliente
-function listenSensores(uid){
-  const sensor1 = db.ref("/clientes/" + uid + "/cliente01");
-  sensor1.on("value", snap => {
-    const data = snap.val() || {};
-    distancia1.textContent = data.dist || "--";
-    temperatura1.textContent = data.temp || "--";
-    umidade1.textContent = data.hum || "--";
+// Função para carregar lista de clientes no master
+function carregarClientes() {
+  db.ref("/clientes").once("value").then(snap => {
+    const sel = document.getElementById("selectCliente");
+    sel.innerHTML = "";
+    snap.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.key;
+      opt.text = c.val().nome;
+      sel.appendChild(opt);
+    });
   });
 }
 
-// Logout
-function logout(){ auth.signOut().then(()=>window.location.href="index.html"); }
+// Abrir painel de cliente selecionado
+function abrirCliente() {
+  const clienteId = document.getElementById("selectCliente").value;
+  if(!clienteId) return alert("Selecione um cliente.");
+  document.getElementById("masterPanel").style.display = "none";
+  document.getElementById("clientePanel").style.display = "block";
+  rodarDashboard(clienteId); // carrega dados do cliente selecionado
+}
+
+// Função que roda os gauges e lê dados do Firebase
+function rodarDashboard(clienteId) {
+  const path = "/clientes/" + clienteId;
+  
+  const gOpt = (col) => ({
+    angle: 0.15, lineWidth: 0.22, radiusScale: 1,
+    pointer: { length: 0.6, strokeWidth: 0.04, color: '#f0f4f8' },
+    colorStart: col, colorStop: col, strokeColor: '#1e293b',
+    highDpiSupport: true, generateGradient: true
+  });
+  gT = new Gauge(document.getElementById("gTemp")).setOptions(gOpt('#f43f5e'));
+  gT.maxValue = 60; gT.setMinValue(-10); gT.set(0);
+  gH = new Gauge(document.getElementById("gHum")).setOptions(gOpt('#00d2ff'));
+  gH.maxValue = 100; gH.setMinValue(0); gH.set(0);
+
+  db.ref(path + "/temp").on("value", snap => {
+    const v = parseFloat(snap.val()); gT.set(v);
+    document.getElementById("tempVal").innerText = v.toFixed(1) + "°C";
+  });
+
+  db.ref(path + "/hum").on("value", snap => {
+    const v = parseFloat(snap.val()); gH.set(v);
+    document.getElementById("humVal").innerText = v.toFixed(1) + "%";
+  });
+
+  db.ref(path + "/led").on("value", snap => {
+    const on = snap.val() == 1;
+    const btn = document.getElementById("btnLED");
+    btn.innerText = on ? "DESATIVAR ILUMINAÇÃO" : "ATIVAR ILUMINAÇÃO";
+    btn.className = "btn-action btn-led " + (on ? "on" : "off");
+    btn.onclick = () => db.ref(path + "/led").set(on ? 0 : 1);
+  });
+}
+
+// Logout seguro
+function fazerLogout() {
+  auth.signOut().then(() => window.location.href="index.html");
+}
 </script>
 </body>
 </html>
