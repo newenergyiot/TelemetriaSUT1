@@ -1,130 +1,131 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NewEnergy | Painel de Monitoramento</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NewEnergy | Painel</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
   <style>
     :root {
       --bg-dark: #0b0f1b;
       --card-bg: #161b2d;
       --accent: #00d2ff;
+      --accent-hover: #0099cc;
       --text-main: #ffffff;
       --text-muted: #8fa3c6;
+      --glass: rgba(255, 255, 255, 0.03);
     }
     body {
-      margin:0;
-      font-family:'Inter','Segoe UI',sans-serif;
+      margin: 0;
+      font-family: 'Inter', sans-serif;
       background: var(--bg-dark);
       color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
     }
     header {
-      background: var(--card-bg);
+      width: 100%;
       padding: 20px;
+      background: var(--card-bg);
       text-align: center;
-      font-weight: 800;
       font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     }
-    .container {
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
       padding: 20px;
     }
     .card {
       background: var(--card-bg);
-      padding: 20px;
-      border-radius: 16px;
-      margin-bottom: 20px;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      width: 300px;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.3);
     }
-    .card h2 {
-      margin-top: 0;
-      font-size: 18px;
-    }
-    .card p {
-      font-size: 16px;
-      color: var(--text-main);
-    }
-    button {
+    .card h2 { margin: 0 0 10px; }
+    .card p { margin: 5px 0; font-size: 18px; }
+    .button-group { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+    .button-group button {
+      padding: 10px 20px;
       background: var(--accent);
-      color: #0b0f1b;
       border: none;
-      padding: 10px 16px;
       border-radius: 12px;
+      color: #0b0f1b;
       cursor: pointer;
       font-weight: 700;
+      transition: 0.3s;
     }
-    button:hover { opacity: 0.9; }
+    .button-group button:hover { background: var(--accent-hover); }
   </style>
-
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-  <header>NewEnergy | Painel</header>
+<header>NewEnergy | Painel</header>
 
-  <div class="container">
-    <div class="card">
-      <h2>Dados do Sensor</h2>
-      <p>Distância: <span id="distancia">--</span> cm</p>
-      <p>Temperatura: <span id="temperatura">--</span> °C</p>
-      <p>Umidade: <span id="umidade">--</span> %</p>
-    </div>
-
-    <div class="card">
-      <h2>Histórico</h2>
-      <button onclick="window.location.href='historico.html'">Ver Histórico</button>
-    </div>
-
-    <div class="card">
-      <h2>Conta</h2>
-      <button id="btnLogout">Sair</button>
-    </div>
+<main>
+  <div class="card">
+    <h2>Dados do Sensor</h2>
+    <p>Distância: <span id="distancia">--</span> cm</p>
+    <p>Temperatura: <span id="temperatura">--</span> °C</p>
+    <p>Umidade: <span id="umidade">--</span> %</p>
   </div>
 
-  <script>
-    // Firebase TelemetriaSUT1
-    const firebaseConfig = {
-      apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-      authDomain: "telemetriasut1.firebaseapp.com",
-      databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-      projectId: "telemetriasut1",
-      storageBucket: "telemetriasut1.firebasestorage.app",
-      messagingSenderId: "591416281880",
-      appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
-    };
+  <div class="button-group">
+    <button onclick="window.location.href='historico.html'">Ver Histórico</button>
+    <button onclick="logout()">Sair</button>
+  </div>
+</main>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+    authDomain: "telemetriasut1.firebaseapp.com",
+    databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+    projectId: "telemetriasut1",
+    storageBucket: "telemetriasut1.firebasestorage.app",
+    messagingSenderId: "591416281880",
+    appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
+  };
 
-    // Redireciona se não estiver logado
-    auth.onAuthStateChanged(user => {
-      if(!user) window.location.href = "index.html";
-    });
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
 
-    // Logout
-    const btnLogout = document.getElementById("btnLogout");
-    btnLogout.addEventListener("click", () => {
-      auth.signOut().then(() => window.location.href = "index.html");
-    });
+  const distanciaEl = document.getElementById("distancia");
+  const temperaturaEl = document.getElementById("temperatura");
+  const umidadeEl = document.getElementById("umidade");
 
-    // Atualiza dados do sensor em tempo real
-    const distanciaEl = document.getElementById("distancia");
-    const temperaturaEl = document.getElementById("temperatura");
-    const umidadeEl = document.getElementById("umidade");
+  auth.onAuthStateChanged(user => {
+    if (!user) window.location.href = "index.html";
+    else listenSensor(user.uid);
+  });
 
-    const sensorRef = db.ref("sensores"); // path dos dados no RTDB
+  function listenSensor(uid){
+    const refTemp = db.ref("/clientes/" + uid + "/temp");
+    const refHum = db.ref("/clientes/" + uid + "/hum");
+    const refDist = db.ref("/clientes/" + uid + "/dist");
 
-    sensorRef.on("value", snapshot => {
-      const data = snapshot.val();
-      if(data){
-        distanciaEl.textContent = data.distancia ?? "--";
-        temperaturaEl.textContent = data.temperatura ?? "--";
-        umidadeEl.textContent = data.umidade ?? "--";
-      }
-    });
-  </script>
+    refTemp.on("value", snap => temperaturaEl.textContent = snap.val() || "--");
+    refHum.on("value", snap => umidadeEl.textContent = snap.val() || "--");
+    refDist.on("value", snap => distanciaEl.textContent = snap.val() || "--");
+  }
+
+  function logout(){
+    auth.signOut().then(() => window.location.href="index.html");
+  }
+</script>
 </body>
 </html>
