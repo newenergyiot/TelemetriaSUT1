@@ -1,138 +1,100 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NewEnergy | Histórico de Sensores</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NewEnergy | Histórico</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-
   <style>
     :root {
       --bg-dark: #0b0f1b;
       --card-bg: #161b2d;
       --accent: #00d2ff;
+      --accent-hover: #0099cc;
       --text-main: #ffffff;
       --text-muted: #8fa3c6;
     }
-    body {
-      margin:0;
-      font-family:'Inter','Segoe UI',sans-serif;
-      background: var(--bg-dark);
-      color: var(--text-main);
-    }
-    header {
-      background: var(--card-bg);
-      padding: 20px;
-      text-align: center;
-      font-weight: 800;
-      font-size: 24px;
-    }
-    .container {
-      padding: 20px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid rgba(255,255,255,0.1);
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background: var(--card-bg);
-      font-weight: 600;
-    }
-    td {
-      background: rgba(22,27,45,0.5);
-    }
-    button {
-      background: var(--accent);
-      color: #0b0f1b;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 700;
-      margin-top: 10px;
-    }
-    button:hover { opacity: 0.9; }
+    body { margin:0; font-family:'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); }
+    header { width: 100%; padding: 20px; background: var(--card-bg); text-align:center; font-size:24px; font-weight:800; box-shadow:0 4px 10px rgba(0,0,0,0.3);}
+    main { padding:20px; display:flex; flex-direction:column; gap:20px; align-items:center; }
+    .card { background: var(--card-bg); padding:20px; border-radius:16px; width:100%; max-width:400px; }
+    .card h3 { margin:0 0 10px; font-size:18px; }
+    .card ul { list-style:none; padding:0; margin:0; max-height:200px; overflow-y:auto; }
+    .card li { padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
+    button { padding:10px 20px; background:var(--accent); border:none; border-radius:12px; color:#0b0f1b; cursor:pointer; font-weight:700; margin-top:10px; transition:0.3s;}
+    button:hover { background: var(--accent-hover);}
   </style>
-
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-  <header>NewEnergy | Histórico</header>
+<header>NewEnergy | Histórico</header>
 
-  <div class="container">
-    <button onclick="window.location.href='painel.html'">Voltar ao Painel</button>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Data/Hora</th>
-          <th>Distância (cm)</th>
-          <th>Temperatura (°C)</th>
-          <th>Umidade (%)</th>
-        </tr>
-      </thead>
-      <tbody id="historicoBody">
-        <tr><td colspan="4">Carregando...</td></tr>
-      </tbody>
-    </table>
+<main>
+  <div class="card">
+    <h3>Leituras Diárias</h3>
+    <ul id="diario"></ul>
   </div>
 
-  <script>
-    // Firebase TelemetriaSUT1
-    const firebaseConfig = {
-      apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-      authDomain: "telemetriasut1.firebaseapp.com",
-      databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-      projectId: "telemetriasut1",
-      storageBucket: "telemetriasut1.firebasestorage.app",
-      messagingSenderId: "591416281880",
-      appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
-    };
+  <div class="card">
+    <h3>Leituras Semanais</h3>
+    <ul id="semanal"></ul>
+  </div>
 
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
+  <div class="card">
+    <h3>Leituras Mensais</h3>
+    <ul id="mensal"></ul>
+  </div>
 
-    // Redireciona se não estiver logado
-    auth.onAuthStateChanged(user => {
-      if(!user) window.location.href = "index.html";
-    });
+  <div class="card">
+    <h3>Leituras Anuais</h3>
+    <ul id="anual"></ul>
+  </div>
 
-    const historicoBody = document.getElementById("historicoBody");
+  <button onclick="window.location.href='painel.html'">Voltar</button>
+</main>
 
-    // Referência ao histórico no Firebase
-    const histRef = db.ref("historico"); // path dos registros históricos
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+    authDomain: "telemetriasut1.firebaseapp.com",
+    databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+    projectId: "telemetriasut1",
+    storageBucket: "telemetriasut1.firebasestorage.app",
+    messagingSenderId: "591416281880",
+    appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
+  };
 
-    histRef.limitToLast(50).on("value", snapshot => {
-      const data = snapshot.val();
-      historicoBody.innerHTML = "";
-      if(data){
-        // Ordena por timestamp
-        const entries = Object.entries(data).sort((a,b) => b[1].timestamp - a[1].timestamp);
-        entries.forEach(([key, entry]) => {
-          const row = document.createElement("tr");
-          const dt = new Date(entry.timestamp);
-          row.innerHTML = `
-            <td>${dt.toLocaleString()}</td>
-            <td>${entry.distancia ?? "--"}</td>
-            <td>${entry.temperatura ?? "--"}</td>
-            <td>${entry.umidade ?? "--"}</td>
-          `;
-          historicoBody.appendChild(row);
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.database();
+
+  const diarioEl = document.getElementById("diario");
+  const semanalEl = document.getElementById("semanal");
+  const mensalEl = document.getElementById("mensal");
+  const anualEl = document.getElementById("anual");
+
+  auth.onAuthStateChanged(user => {
+    if(!user) window.location.href = "index.html";
+    else loadHistorico(user.uid);
+  });
+
+  function loadHistorico(uid){
+    const tipos = ["diario","semanal","mensal","anual"];
+    tipos.forEach(t => {
+      const ref = db.ref("/clientes/" + uid + "/historico/" + t);
+      const el = document.getElementById(t);
+      ref.limitToLast(20).on("value", snap => {
+        el.innerHTML = "";
+        snap.forEach(s => {
+          const val = s.val();
+          el.innerHTML += `<li>${new Date(parseInt(s.key)*1000).toLocaleString()} — Temp: ${val.temp} °C, Hum: ${val.hum} %</li>`;
         });
-      } else {
-        historicoBody.innerHTML = `<tr><td colspan="4">Nenhum registro encontrado</td></tr>`;
-      }
+      });
     });
-  </script>
+  }
+</script>
 </body>
 </html>
