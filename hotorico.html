@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NewEnergy | Histórico</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg-dark: #0b0f1b;
+  --card-bg: #161b2d;
+  --accent: #00d2ff;
+  --accent-hover: #0099cc;
+  --text-main: #ffffff;
+  --text-muted: #8fa3c6;
+  --glass: rgba(255, 255, 255, 0.03);
+  --error: #ff5722;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-main);
+}
+
+header {
+  background: var(--card-bg);
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+header h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+}
+
+header button {
+  background: var(--accent);
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  color: #0b0f1b;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+header button:hover { background: var(--accent-hover); }
+
+.container {
+  max-width: 1200px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+.filters {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filters label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.filters input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(0,0,0,0.2);
+  color: #fff;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+thead {
+  background: rgba(0,0,0,0.3);
+}
+
+thead th {
+  text-align: left;
+  padding: 12px 15px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+tbody tr:hover { background: rgba(0,210,255,0.05); }
+
+tbody td {
+  padding: 12px 15px;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+#exportBtn {
+  margin-top: 15px;
+  background: var(--accent);
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  color: #0b0f1b;
+}
+
+#exportBtn:hover { background: var(--accent-hover); }
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+
+<body>
+<header>
+  <h1>Histórico de Monitoramento</h1>
+  <button id="logoutBtn">Sair</button>
+</header>
+
+<div class="container">
+  <div class="filters">
+    <div>
+      <label>Data Início:</label>
+      <input type="date" id="startDate">
+    </div>
+    <div>
+      <label>Data Fim:</label>
+      <input type="date" id="endDate">
+    </div>
+    <div>
+      <button id="filterBtn">Filtrar</button>
+    </div>
+  </div>
+
+  <table id="historyTable">
+    <thead>
+      <tr>
+        <th>Data/Hora</th>
+        <th>Sensor</th>
+        <th>Temperatura (°C)</th>
+        <th>Umidade (%)</th>
+        <th>Distância (cm)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <button id="exportBtn">Exportar CSV</button>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyB5FnkQiFi3gn9Iup2KNcbrKxWd-0Jjo6Y",
+  authDomain: "oficial-688e8.firebaseapp.com",
+  databaseURL: "https://oficial-688e8-default-rtdb.firebaseio.com/",
+  projectId: "oficial-688e8"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const historyTableBody = document.querySelector("#historyTable tbody");
+const startDateEl = document.getElementById("startDate");
+const endDateEl = document.getElementById("endDate");
+const filterBtn = document.getElementById("filterBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const exportBtn = document.getElementById("exportBtn");
+
+// Redireciona se não estiver logado
+auth.onAuthStateChanged(user => {
+  if(!user) window.location.href = "index.html";
+});
+
+// Logout
+logoutBtn.addEventListener("click", () => {
+  auth.signOut().then(() => window.location.href = "index.html");
+});
+
+// Carrega histórico
+function loadHistory(start=null, end=null) {
+  db.ref("historico").once("value").then(snapshot => {
+    historyTableBody.innerHTML = "";
+    snapshot.forEach(child => {
+      const record = child.val();
+      const recordDate = new Date(record.timestamp);
+      if(start && recordDate < start) return;
+      if(end && recordDate > end) return;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${recordDate.toLocaleString()}</td>
+        <td>${record.sensor || "-"}</td>
+        <td>${record.temperatura ?? "-"}</td>
+        <td>${record.umidade ?? "-"}</td>
+        <td>${record.distancia ?? "-"}</td>
+      `;
+      historyTableBody.appendChild(tr);
+    });
+  });
+}
+
+// Filtro
+filterBtn.addEventListener("click", () => {
+  const start = startDateEl.value ? new Date(startDateEl.value) : null;
+  const end = endDateEl.value ? new Date(endDateEl.value + "T23:59:59") : null;
+  loadHistory(start, end);
+});
+
+// Exportar CSV
+exportBtn.addEventListener("click", () => {
+  let csv = "Data/Hora,Sensor,Temperatura,Umidade,Distância\n";
+  historyTableBody.querySelectorAll("tr").forEach(tr => {
+    let row = [];
+    tr.querySelectorAll("td").forEach(td => row.push(td.textContent));
+    csv += row.join(",") + "\n";
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "historico.csv");
+  link.click();
+});
+
+// Carrega inicialmente
+loadHistory();
+</script>
+</body>
+</html>
