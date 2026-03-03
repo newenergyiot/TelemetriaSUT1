@@ -1,110 +1,185 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NewEnergy | Painel Master</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NewEnergy | Painel Master/Cliente</title>
 <style>
-:root{--bg-dark:#0b0f1b;--card-bg:#161b2d;--accent:#00d2ff;--accent-hover:#0099cc;--text-main:#fff;--text-muted:#8fa3c6;}
-body{margin:0;font-family:'Inter',sans-serif;background:var(--bg-dark);color:var(--text-main);display:flex;flex-direction:column;align-items:center;min-height:100vh;}
-header{width:100%;padding:20px;background:var(--card-bg);text-align:center;font-size:24px;font-weight:800;box-shadow:0 4px 10px rgba(0,0,0,0.3);}
-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:20px;padding:20px;width:100%;max-width:800px;}
-.card{background:var(--card-bg);padding:20px;border-radius:20px;text-align:center;width:100%;box-shadow:0 10px 20px rgba(0,0,0,0.3);}
-input,select{width:100%;padding:10px;margin:5px 0;border-radius:8px;border:none;background:rgba(0,0,0,0.2);color:#fff;}
-button{padding:10px 20px;background:var(--accent);border:none;border-radius:12px;color:#0b0f1b;cursor:pointer;font-weight:700;transition:0.3s;margin-top:5px;}
-button:hover{background:var(--accent-hover);}
+  :root { --bg-dark:#070a13; --card-bg:#101625; --accent:#00d2ff; --text-main:#f0f4f8; --text-muted:#64748b; --on:#00ff88; --off:#f43f5e; }
+  body{margin:0;font-family:'Inter',sans-serif;background:var(--bg-dark);color:var(--text-main);display:flex;justify-content:center;align-items:flex-start;padding:15px;}
+  .card{background:var(--card-bg);border-radius:28px;padding:30px;width:100%;max-width:800px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);border:1px solid rgba(255,255,255,0.08);}
+  .header-main{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+  .btn-logout{background:var(--off);border:none;padding:6px 12px;border-radius:10px;color:#fff;cursor:pointer;font-weight:700;}
+  select, input{padding:8px;border-radius:10px;border:none;margin-bottom:10px;width:100%;box-sizing:border-box;}
+  button{padding:10px 15px;border:none;border-radius:12px;font-weight:700;cursor:pointer;margin-top:5px;}
+  .btn-led.on{background:var(--on);color:#052e16;}
+  .btn-led.off{background:#1e293b;color:var(--text-muted);border:1px solid rgba(255,255,255,0.1);}
+  #adminPanel{display:none;flex-direction:column;gap:10px;margin-top:20px;}
+  .gauges-container{display:flex;gap:15px;margin-bottom:20px;}
+  .gauge-box{flex:1;background:rgba(255,255,255,0.03);padding:20px;border-radius:22px;text-align:center;}
+  .g-value{font-size:22px;font-weight:900;}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gaugeJS/dist/gauge.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 </head>
 <body>
 
-<header>NewEnergy | Painel Master</header>
-<main>
-  <div class="card">
-    <h2>Adicionar Cliente</h2>
-    <input type="email" id="newEmail" placeholder="Email do cliente">
-    <input type="password" id="newPass" placeholder="Senha do cliente">
-    <button onclick="addCliente()">Adicionar Cliente</button>
+<div class="card">
+  <div class="header-main">
+    <h2>NewEnergy Dashboard</h2>
+    <button class="btn-logout" onclick="fazerLogout()">Logout</button>
   </div>
 
-  <div class="card">
-    <h2>Gerenciar Sensores</h2>
+  <!-- Se for master, selecionar cliente -->
+  <div id="masterControls" style="display:none;margin-bottom:15px;">
+    <label>Selecionar Cliente:</label>
     <select id="selectCliente"></select>
-    <input type="text" id="sensorName" placeholder="Nome do Sensor">
-    <button onclick="addSensor()">Adicionar Sensor</button>
-    <button onclick="removeSensor()">Remover Sensor</button>
+    <button onclick="abrirAdmin()">Configurações Avançadas</button>
   </div>
-</main>
+
+  <!-- Painel de sensores -->
+  <div class="gauges-container">
+    <div class="gauge-box">
+      <div>Temperatura</div>
+      <canvas id="gTemp"></canvas>
+      <div id="tempVal" class="g-value">--°C</div>
+    </div>
+    <div class="gauge-box">
+      <div>Umidade</div>
+      <canvas id="gHum"></canvas>
+      <div id="humVal" class="g-value">--%</div>
+    </div>
+  </div>
+
+  <button id="btnLED" class="btn-led off">LED</button>
+  <button onclick="location.href='historico.html'">Relatórios</button>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel">
+    <h3>Configurações Avançadas</h3>
+    <input type="number" id="tMin" placeholder="Temp Mín">
+    <input type="number" id="tMax" placeholder="Temp Máx">
+    <input type="number" id="hMin" placeholder="Hum Mín">
+    <input type="number" id="hMax" placeholder="Hum Máx">
+    <input type="email" id="cfgEmail" placeholder="Email para alertas">
+    <input type="number" id="cfgFreq" placeholder="Leituras/Hora">
+    <button onclick="salvarConfig()">Salvar Configurações</button>
+  </div>
+</div>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-  authDomain: "telemetriasut1.firebaseapp.com",
-  databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-  projectId: "telemetriasut1",
-  storageBucket: "telemetriasut1.firebasestorage.app",
-  messagingSenderId: "591416281880",
-  appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db = firebase.database();
+emailjs.init("W2__8f2fBoqRPX9hX");
 
-const selectCliente = document.getElementById("selectCliente");
-
-// Só permitir o admin
-auth.onAuthStateChanged(user=>{
-  if(!user || user.email!="newenergy.iot@gmail.com") window.location.href="index.html";
-  else loadClientes();
+firebase.initializeApp({
+  apiKey: "AIzaSyB5FnkQiFi3gn9Iup2KNcbrKxWd-0Jjo6Y",
+  authDomain: "oficial-688e8.firebaseapp.com",
+  databaseURL: "https://oficial-688e8-default-rtdb.firebaseio.com/",
+  projectId: "oficial-688e8"
 });
 
-// Adicionar cliente
-function addCliente(){
-  const email=document.getElementById("newEmail").value;
-  const pass=document.getElementById("newPass").value;
-  if(!email||!pass)return alert("Preencha todos os campos");
-  auth.createUserWithEmailAndPassword(email,pass)
-    .then(res=>{
-      const uid=res.user.uid;
-      db.ref("/clientes/"+uid).set({cliente01:{temp:0,hum:0,dist:0}});
-      alert("Cliente adicionado com sucesso");
-      loadClientes();
-    }).catch(e=>alert("Erro: "+e.message));
+const db = firebase.database();
+const auth = firebase.auth();
+let gT,gH,uidSelecionado,configCliente={tMin:15,tMax:35,hMin:30,hMax:80,leiturasPorHora:20,emailDestino:""},ultimaVezAlertado=0;
+
+// Gauges
+function iniciarGauges(){
+  const opt = (col)=>({angle:0.15,lineWidth:0.22,radiusScale:1,pointer:{length:0.6,strokeWidth:0.04,color:'#f0f4f8'},colorStart:col,colorStop:col,strokeColor:'#1e293b',highDpiSupport:true,generateGradient:true});
+  gT = new Gauge(document.getElementById("gTemp")).setOptions(opt('#f43f5e')); gT.maxValue=60; gT.setMinValue(-10); gT.set(0);
+  gH = new Gauge(document.getElementById("gHum")).setOptions(opt('#00d2ff')); gH.maxValue=100; gH.setMinValue(0); gH.set(0);
 }
 
-// Carregar clientes
-function loadClientes(){
-  db.ref("/clientes").once("value",snap=>{
-    selectCliente.innerHTML="";
-    snap.forEach(c=>{
-      const opt=document.createElement("option");
-      opt.value=c.key;
-      opt.textContent=c.key;
-      selectCliente.appendChild(opt);
-    });
+// Atualizar sensores do cliente
+function listenSensores(uid){
+  uidSelecionado = uid;
+  db.ref("/clientes/"+uid).on("value",snap=>{
+    const dados = snap.val() || {};
+    const keys = Object.keys(dados);
+    if(keys.length>0){
+      const firstSensor = dados[keys[0]];
+      const t=parseFloat(firstSensor.temp||0), h=parseFloat(firstSensor.hum||0);
+      gT.set(t); gH.set(h);
+      document.getElementById("tempVal").innerText=t+"°C";
+      document.getElementById("humVal").innerText=h+"%";
+      analisarAlertas(t,h);
+    }
+  });
+  db.ref("/config_alertas/"+uid).on("value",snap=>{
+    if(snap.val()) configCliente = snap.val();
+    document.getElementById("tMin").value=configCliente.tMin;
+    document.getElementById("tMax").value=configCliente.tMax;
+    document.getElementById("hMin").value=configCliente.hMin;
+    document.getElementById("hMax").value=configCliente.hMax;
+    document.getElementById("cfgEmail").value=configCliente.emailDestino;
+    document.getElementById("cfgFreq").value=configCliente.leiturasPorHora||20;
   });
 }
 
-// Adicionar sensor
-function addSensor(){
-  const uid=selectCliente.value;
-  const sensor=document.getElementById("sensorName").value.trim();
-  if(!uid||!sensor)return alert("Selecione cliente e sensor");
-  db.ref("/clientes/"+uid+"/"+sensor).set({temp:0,hum:0,dist:0});
-  alert("Sensor adicionado");
+// Alertas
+function analisarAlertas(t,h){
+  const msg = document.getElementById("alertMessage");
+  let erro=(t>configCliente.tMax||t<configCliente.tMin||h>configCliente.hMax||h<configCliente.hMin);
+  if(erro && Date.now()-ultimaVezAlertado>600000){
+    enviarAlertaEmail(t,h);
+  }
 }
 
-// Remover sensor
-function removeSensor(){
-  const uid=selectCliente.value;
-  const sensor=document.getElementById("sensorName").value.trim();
-  if(!uid||!sensor)return alert("Selecione cliente e sensor");
-  db.ref("/clientes/"+uid+"/"+sensor).remove();
-  alert("Sensor removido");
+// Envio de e-mail
+function enviarAlertaEmail(t,h){
+  if(!configCliente.emailDestino) return;
+  emailjs.send("service_kx31f3s","template_mqzi3at",{
+    equipamento:"NewEnergy Monitor Pro",
+    tipo:"Anomalia Detectada",
+    valor:`Temp: ${t}°C | Hum: ${h}%`,
+    data:new Date().toLocaleString(),
+    para_email:configCliente.emailDestino
+  }).then(()=>ultimaVezAlertado=Date.now());
 }
+
+// Admin Panel
+function abrirAdmin(){document.getElementById("adminPanel").style.display="flex";}
+function salvarConfig(){
+  const updates = {
+    tMin:parseFloat(document.getElementById("tMin").value),
+    tMax:parseFloat(document.getElementById("tMax").value),
+    hMin:parseFloat(document.getElementById("hMin").value),
+    hMax:parseFloat(document.getElementById("hMax").value),
+    emailDestino:document.getElementById("cfgEmail").value,
+    leiturasPorHora:parseInt(document.getElementById("cfgFreq").value)||20
+  };
+  if(uidSelecionado) db.ref("/config_alertas/"+uidSelecionado).update(updates).then(()=>alert("Configurações salvas!"));
+}
+
+// LED
+document.getElementById("btnLED").onclick=()=>{db.ref("/led").get().then(s=>db.ref("/led").set(s.val()==1?0:1));};
+
+// Logout
+function fazerLogout(){auth.signOut().then(()=>window.location.replace("index.html"));}
+
+// Init
+auth.onAuthStateChanged(user=>{
+  if(!user) window.location.replace("index.html");
+  else{
+    iniciarGauges();
+    if(user.email==="newenergy.iot@gmail.com"){ // Master
+      document.getElementById("masterControls").style.display="block";
+      db.ref("/clientes").once("value",snap=>{
+        const sel=document.getElementById("selectCliente");
+        sel.innerHTML="";
+        snap.forEach(c=>{
+          const opt=document.createElement("option");
+          opt.value=c.key; opt.text=c.key; sel.appendChild(opt);
+        });
+        if(sel.options.length>0) listenSensores(sel.value);
+        sel.onchange=()=>listenSensores(sel.value);
+      });
+    }else{ // Cliente comum
+      listenSensores(user.uid);
+    }
+  }
+});
 </script>
 </body>
 </html>
