@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NewEnergy | Painel</title>
+  <title>NewEnergy | Painel Cliente01</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -13,7 +13,6 @@
       --accent-hover: #0099cc;
       --text-main: #ffffff;
       --text-muted: #8fa3c6;
-      --glass: rgba(255, 255, 255, 0.03);
     }
     body {
       margin: 0;
@@ -67,13 +66,15 @@
     }
     .button-group button:hover { background: var(--accent-hover); }
   </style>
+
+  <!-- Firebase compat -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
 
-<header>NewEnergy | Painel</header>
+<header>NewEnergy | Painel Cliente01</header>
 
 <main>
   <div class="card">
@@ -90,6 +91,7 @@
 </main>
 
 <script>
+  // Configuração Firebase TelemetriaSUT1
   const firebaseConfig = {
     apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
     authDomain: "telemetriasut1.firebaseapp.com",
@@ -108,12 +110,14 @@
   const temperaturaEl = document.getElementById("temperatura");
   const umidadeEl = document.getElementById("umidade");
 
+  // Redireciona se não estiver logado
   auth.onAuthStateChanged(user => {
     if (!user) window.location.href = "index.html";
     else listenSensor(user.uid);
   });
 
   function listenSensor(uid){
+    // Ajustado para cliente01
     const refTemp = db.ref("/clientes/" + uid + "/temp");
     const refHum = db.ref("/clientes/" + uid + "/hum");
     const refDist = db.ref("/clientes/" + uid + "/dist");
@@ -127,5 +131,6 @@
     auth.signOut().then(() => window.location.href="index.html");
   }
 </script>
+
 </body>
 </html>
