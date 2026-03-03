@@ -1,100 +1,170 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NewEnergy | Histórico</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg-dark: #0b0f1b;
-      --card-bg: #161b2d;
-      --accent: #00d2ff;
-      --accent-hover: #0099cc;
-      --text-main: #ffffff;
-      --text-muted: #8fa3c6;
-    }
-    body { margin:0; font-family:'Inter', sans-serif; background: var(--bg-dark); color: var(--text-main); }
-    header { width: 100%; padding: 20px; background: var(--card-bg); text-align:center; font-size:24px; font-weight:800; box-shadow:0 4px 10px rgba(0,0,0,0.3);}
-    main { padding:20px; display:flex; flex-direction:column; gap:20px; align-items:center; }
-    .card { background: var(--card-bg); padding:20px; border-radius:16px; width:100%; max-width:400px; }
-    .card h3 { margin:0 0 10px; font-size:18px; }
-    .card ul { list-style:none; padding:0; margin:0; max-height:200px; overflow-y:auto; }
-    .card li { padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
-    button { padding:10px 20px; background:var(--accent); border:none; border-radius:12px; color:#0b0f1b; cursor:pointer; font-weight:700; margin-top:10px; transition:0.3s;}
-    button:hover { background: var(--accent-hover);}
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NewEnergy | Histórico Avançado</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-dark: #0b0f1b; --card-bg: #161b2d;
+  --accent-hum: #00d2ff; --accent-temp: #f43f5e;
+  --text-main: #ffffff; --text-muted: #8fa3c6;
+  --border: rgba(255,255,255,0.08); --danger: #ff4757;
+}
+body { margin:0; font-family:'Inter',sans-serif; background: var(--bg-dark); color: var(--text-main); display:flex; justify-content:center; padding:20px;}
+.card { background: var(--card-bg); border-radius:28px; padding:30px; width:100%; max-width:900px; border:1px solid var(--border); box-shadow:0 25px 50px rgba(0,0,0,0.5);}
+.tabs { display:flex; background:#070a13; padding:5px; border-radius:14px; margin-bottom:20px; gap:4px; border:1px solid var(--border);}
+.tab { flex:1; padding:12px; text-align:center; border-radius:10px; cursor:pointer; font-size:11px; font-weight:700; color:var(--text-muted); transition:0.3s; text-transform:uppercase;}
+.tab.active { background: var(--card-bg); color: var(--accent-hum); box-shadow:0 4px 12px rgba(0,0,0,0.3);}
+.chart-container { background: rgba(0,0,0,0.2); border-radius:20px; padding:15px; margin-bottom:25px; border:1px solid var(--border); height:350px;}
+#lista { max-height:400px; overflow-y:auto; padding-right:5px;}
+.item { background: rgba(255,255,255,0.03); padding:12px 20px; border-radius:12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; border:1px solid rgba(255,255,255,0.02); transition:0.3s;}
+.item.alerta { border-left:4px solid var(--danger); background: rgba(255,71,87,0.1);}
+.data-divider { color:var(--accent-hum); font-size:10px; font-weight:900; margin:25px 0 10px; display:flex; align-items:center; text-transform:uppercase;}
+.data-divider::after { content:""; flex:1; height:1px; background: var(--border); margin-left:10px;}
+.btn-group { display:flex; gap:10px; margin-top:20px;}
+.btn { flex:1; padding:16px; border:none; border-radius:14px; font-weight:800; cursor:pointer; font-size:12px; text-transform:uppercase; transition:0.3s;}
+.btn-pdf { background: var(--accent-hum); color:#000; box-shadow:0 10px 20px rgba(0,210,255,0.2);}
+.btn-back { background: transparent; color: var(--text-muted); border:1px solid var(--border);}
+.valor-critico { color: var(--danger) !important; font-weight:900;}
+</style>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
-<header>NewEnergy | Histórico</header>
+<div class="card">
+  <header style="border-left:4px solid var(--accent-hum); padding-left:20px; margin-bottom:25px;">
+    <h1 style="margin:0; font-size:24px;">Advanced Intelligence</h1>
+    <p style="margin:0; color:var(--text-muted); font-size:12px;">Relatório de Performance Técnica</p>
+  </header>
 
-<main>
-  <div class="card">
-    <h3>Leituras Diárias</h3>
-    <ul id="diario"></ul>
+  <div class="tabs">
+    <div class="tab active" data-periodo="diario">Diário</div>
+    <div class="tab" data-periodo="semanal">Semanal</div>
+    <div class="tab" data-periodo="mensal">Mensal</div>
+    <div class="tab" data-periodo="anual">Anual</div>
   </div>
 
-  <div class="card">
-    <h3>Leituras Semanais</h3>
-    <ul id="semanal"></ul>
-  </div>
+  <div class="chart-container"><canvas id="mainChart"></canvas></div>
+  <div id="lista"></div>
 
-  <div class="card">
-    <h3>Leituras Mensais</h3>
-    <ul id="mensal"></ul>
+  <div class="btn-group">
+    <button class="btn btn-pdf" onclick="exportarPDF()">Exportar Relatório Analítico</button>
+    <button class="btn btn-back" onclick="location.href='painel.html'">Voltar</button>
   </div>
-
-  <div class="card">
-    <h3>Leituras Anuais</h3>
-    <ul id="anual"></ul>
-  </div>
-
-  <button onclick="window.location.href='painel.html'">Voltar</button>
-</main>
+</div>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-    authDomain: "telemetriasut1.firebaseapp.com",
-    databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-    projectId: "telemetriasut1",
-    storageBucket: "telemetriasut1.firebasestorage.app",
-    messagingSenderId: "591416281880",
-    appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
-  };
+firebase.initializeApp({
+  apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+  authDomain: "telemetriasut1.firebaseapp.com",
+  databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+  projectId: "telemetriasut1"
+});
+const db = firebase.database();
+let myChart = null, globalData = [];
+let limitesAtivos = { tMin:0,tMax:60,hMin:0,hMax:100 };
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
-
-  const diarioEl = document.getElementById("diario");
-  const semanalEl = document.getElementById("semanal");
-  const mensalEl = document.getElementById("mensal");
-  const anualEl = document.getElementById("anual");
-
-  auth.onAuthStateChanged(user => {
-    if(!user) window.location.href = "index.html";
-    else loadHistorico(user.uid);
+function sincronizarConfiguracoes() {
+  db.ref("/config_alertas").on("value", snap=>{
+    const val = snap.val();
+    if(val) { limitesAtivos.tMin=val.tMin||0; limitesAtivos.tMax=val.tMax||60; limitesAtivos.hMin=val.hMin||0; limitesAtivos.hMax=val.hMax||100; if(globalData.length>0) renderUI(); }
   });
+}
 
-  function loadHistorico(uid){
-    const tipos = ["diario","semanal","mensal","anual"];
-    tipos.forEach(t => {
-      const ref = db.ref("/clientes/" + uid + "/historico/" + t);
-      const el = document.getElementById(t);
-      ref.limitToLast(20).on("value", snap => {
-        el.innerHTML = "";
-        snap.forEach(s => {
-          const val = s.val();
-          el.innerHTML += `<li>${new Date(parseInt(s.key)*1000).toLocaleString()} — Temp: ${val.temp} °C, Hum: ${val.hum} %</li>`;
-        });
+async function fetchData(periodo) {
+  const listaDiv = document.getElementById("lista");
+  listaDiv.innerHTML = "<p style='text-align:center; padding:50px;'>Sincronizando registros...</p>";
+  globalData = [];
+  const uid = firebase.auth().currentUser.uid;
+
+  try {
+    const snapshot = await db.ref("/clientes/"+uid+"/historico/"+periodo).once("value");
+    const base = snapshot.val();
+    if(!base){ listaDiv.innerHTML="<p style='text-align:center; padding:40px;'>Nenhum dado encontrado.</p>"; if(myChart) myChart.destroy(); return; }
+
+    const hoje = new Date(); // para comparar datas
+    Object.keys(base).forEach(pasta=>{
+      const registros = base[pasta];
+      Object.keys(registros).forEach(ts=>{
+        const dt = new Date(parseInt(ts)*1000);
+        let incluir = false;
+        if(periodo==='diario' && dt.toLocaleDateString()===hoje.toLocaleDateString()) incluir=true;
+        else if(periodo==='semanal' && (hoje - dt)/86400000 <=7) incluir=true;
+        else if(periodo==='mensal' && (hoje - dt)/86400000 <=30) incluir=true;
+        else if(periodo==='anual') incluir=true;
+        if(incluir) globalData.push({ ts:parseInt(ts), temp:parseFloat(registros[ts].temp), hum:parseFloat(registros[ts].hum), data: dt.toLocaleDateString('pt-BR'), hora: dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) });
       });
     });
-  }
+
+    globalData.sort((a,b)=>b.ts-a.ts);
+    renderUI(); renderChart(periodo);
+
+  } catch(e){ console.error(e); }
+}
+
+function renderUI(){
+  const listaDiv=document.getElementById("lista");
+  listaDiv.innerHTML=""; let ultimaData="";
+  globalData.forEach(d=>{
+    if(d.data!==ultimaData){ const div=document.createElement('div'); div.className='data-divider'; div.innerHTML=`📅 ${d.data}`; listaDiv.appendChild(div); ultimaData=d.data; }
+    const erroT = (d.temp>limitesAtivos.tMax||d.temp<limitesAtivos.tMin);
+    const erroH = (d.hum>limitesAtivos.hMax||d.hum<limitesAtivos.hMin);
+    const item=document.createElement('div');
+    item.className=`item ${(erroT||erroH)?'alerta':''}`;
+    item.innerHTML=`<div><b>${d.hora}</b><br><small style="color:var(--text-muted)">ID: ${d.ts}</small></div>
+    <div style="display:flex; gap:20px; text-align:right;">
+      <div><small style="display:block; font-size:8px;">TEMPERATURA</small><span class="${erroT?'valor-critico':''}" style="color:var(--accent-temp); font-weight:800;">${d.temp.toFixed(2)}°C</span></div>
+      <div><small style="display:block; font-size:8px;">UMIDADE</small><span class="${erroH?'valor-critico':''}" style="color:var(--accent-hum); font-weight:800;">${d.hum.toFixed(2)}%</span></div>
+    </div>`;
+    listaDiv.appendChild(item);
+  });
+}
+
+function renderChart(periodo){
+  if(myChart) myChart.destroy();
+  const cleanData=[...globalData].sort((a,b)=>a.ts-b.ts);
+  const ctx=document.getElementById('mainChart').getContext('2d');
+  myChart=new Chart(ctx,{
+    type:'line',
+    data:{ labels:cleanData.map(d=>periodo==='diario'?d.hora:d.data), datasets:[
+      { label:'Temp', data:cleanData.map(d=>d.temp), borderColor:'#f43f5e', tension:0.4, pointRadius:2, backgroundColor:'rgba(244,63,94,0.1)', fill:true },
+      { label:'Umid', data:cleanData.map(d=>d.hum), borderColor:'#00d2ff', tension:0.4, pointRadius:2, backgroundColor:'rgba(0,210,255,0.1)', fill:true }
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, scales:{y:{grid:{color:'rgba(255,255,255,0.05)'},ticks:{color:'#64748b'}}, x:{grid:{display:false}, ticks:{color:'#64748b'}} }, plugins:{legend:{display:false}}}
+  });
+}
+
+async function exportarPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc=new jsPDF(); const aba=document.querySelector('.tab.active').innerText;
+  doc.setFillColor(16,22,37); doc.rect(0,0,210,45,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(22); doc.text("NEWENERGY",15,20);
+  doc.setFontSize(9); doc.setTextColor(0,210,255); doc.text("RELATÓRIO DE MONITORAMENTO - "+aba.toUpperCase(),15,28);
+  doc.setFillColor(245,247,250); doc.rect(15,55,180,15,'F'); doc.setTextColor(100); doc.setFontSize(8);
+  doc.text(`Limites no Registro: Temp [${limitesAtivos.tMin}-${limitesAtivos.tMax}] | Hum [${limitesAtivos.hMin}-${limitesAtivos.hMax}]`,20,65);
+  const imgData=document.getElementById('mainChart').toDataURL("image/png",1.0); doc.addImage(imgData,'PNG',15,80,180,60);
+  let py=150; doc.setTextColor(0); doc.setFontSize(10); doc.text("LOG DE REGISTROS TÉCNICOS",15,py); py+=8;
+  doc.setFillColor(230,235,245); doc.rect(15,py,180,8,'F'); doc.setFontSize(8); doc.text("DATA/HORA",20,py+5.5); doc.text("TEMPERATURA",80,py+5.5); doc.text("UMIDADE",120,py+5.5); doc.text("STATUS",165,py+5.5); py+=8;
+  globalData.forEach((d,i)=>{
+    if(py>270){ doc.addPage(); py=20;}
+    if(i%2===0){ doc.setFillColor(248,250,255); doc.rect(15,py,180,7,'F'); }
+    const tErr=(d.temp>limitesAtivos.tMax||d.temp<limitesAtivos.tMin);
+    const hErr=(d.hum>limitesAtivos.hMax||d.hum<limitesAtivos.hMin);
+    if(tErr||hErr) doc.setTextColor(200,0,0); else doc.setTextColor(80);
+    doc.text(`${d.data} ${d.hora}`,20,py+5); doc.text(`${d.temp.toFixed(2)}°C`,80,py+5); doc.text(`${d.hum.toFixed(2)}%`,120,py+5); doc.text((tErr||hErr)?"ALERTA":"NORMAL",165,py+5);
+    py+=7;
+  });
+  doc.save(`Relatorio_Performance_${aba}.pdf`);
+}
+
+firebase.auth().onAuthStateChanged(u=>{ if(u){ sincronizarConfiguracoes(); fetchData('diario'); } else location.href='index.html'; });
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',function(){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active')); this.classList.add('active'); fetchData(this.getAttribute('data-periodo')); }));
 </script>
 </body>
 </html>
