@@ -1,116 +1,173 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NewEnergy | Master Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root { --bg-dark:#0b0f1b; --card-bg:#161b2d; --accent:#00d2ff; --text-main:#ffffff; --text-muted:#8fa3c6; --on:#00ff88; --off:#f43f5e; }
-  body{ margin:0; font-family:'Inter',sans-serif; background:var(--bg-dark); color:var(--text-main); padding:15px; display:flex; justify-content:center; }
-  .card{ background:var(--card-bg); border-radius:28px; padding:30px; width:100%; max-width:900px; border:1px solid rgba(255,255,255,0.08); }
-  .header-main{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
-  .btn-logout{ background:var(--off); border:none; padding:8px 15px; border-radius:10px; color:#fff; cursor:pointer; font-weight:700; }
-  select, input{ padding:12px; border-radius:10px; border:none; margin-bottom:10px; width:100%; box-sizing:border-box; background: #0b0f1b; color: #fff; }
-  button{ padding:12px 20px; border:none; border-radius:12px; font-weight:700; cursor:pointer; background: var(--accent); color: #0b0f1b; transition: 0.3s; }
-  .gauges-container{ display:flex; gap:15px; margin: 20px 0; flex-wrap:wrap; }
-  .gauge-box{ flex:1; min-width:140px; background:rgba(255,255,255,0.03); padding:20px; border-radius:22px; text-align:center; }
-  .g-value{ font-size:22px; font-weight:900; margin-top:10px; }
-  #adminPanel{ display:none; flex-direction:column; gap:10px; margin-top:20px; border-top: 1px solid #333; padding-top: 20px; }
-</style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gaugeJS/dist/gauge.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>NewEnergy | Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; --danger:#ff4757; }
+        body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); padding:20px; }
+        .container { max-width: 1100px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .master-zone { background: rgba(0, 210, 255, 0.05); padding: 20px; border-radius: 20px; border: 1px dashed var(--accent); margin-bottom: 30px; display: none; }
+        .sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .sensor-card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
+        .val { font-size: 32px; font-weight: 800; color: var(--accent); }
+        .btn { padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.3s; }
+        .btn-master { background: var(--accent); color: #0b0f1b; margin-right: 10px; }
+        .btn-off { background: var(--danger); color: white; }
+        select, input { padding: 10px; border-radius: 8px; border: 1px solid #2e374a; background: #0b0f1b; color: white; }
+    </style>
 </head>
 <body>
 
-<div class="card">
-  <div class="header-main">
-    <h2>NewEnergy | Master</h2>
-    <button class="btn-logout" onclick="auth.signOut()">Sair</button>
-  </div>
-
-  <label>Selecionar Cliente:</label>
-  <select id="selectCliente"></select>
-  
-  <div style="display:flex; gap:10px;">
-    <button onclick="document.getElementById('adminPanel').style.display='flex'">Configurações</button>
-    <button onclick="verHistorico()">Histórico</button>
-  </div>
-
-  <div class="gauges-container">
-    <div class="gauge-box">
-      <div>Temperatura</div>
-      <canvas id="gTemp"></canvas>
-      <div id="tempVal" class="g-value">--°C</div>
+<div class="container">
+    <div class="header">
+        <div>
+            <h1 id="title">Carregando...</h1>
+            <p id="sub" style="color:#8fa3c6; margin:0"></p>
+        </div>
+        <button class="btn btn-off" onclick="sair()">Sair</button>
     </div>
-    <div class="gauge-box">
-      <div>Umidade</div>
-      <canvas id="gHum"></canvas>
-      <div id="humVal" class="g-value">--%</div>
-    </div>
-  </div>
 
-  <div id="adminPanel">
-    <h3>Alertas e Frequência</h3>
-    <input type="number" id="tMax" placeholder="Temp Máxima">
-    <input type="email" id="cfgEmail" placeholder="Email para Alertas">
-    <button onclick="alert('Configuração salva (Simulado)')">Salvar</button>
-  </div>
+    <div id="masterZone" class="master-zone">
+        <h3 style="margin-top:0">Controle Master (Escala de Clientes)</h3>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button class="btn btn-master" onclick="novoCliente()">+ Cadastrar Cliente</button>
+            <button class="btn btn-master" onclick="vincularSensor()">+ Vincular Sensor</button>
+            <select id="filtroCliente" onchange="trocarVisao(this.value)">
+                <option value="todos">Visualizar Todos os Sensores</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="grid" class="sensor-grid"></div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-  authDomain: "telemetriasut1.firebaseapp.com",
-  databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-  projectId: "telemetriasut1"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+        authDomain: "telemetriasut1.firebaseapp.com",
+        databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+        projectId: "telemetriasut1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
-
-let gT, gH, uidSelecionado;
-
-function iniciarGauges(){
-  const opt = (col)=>({ angle:0.15, lineWidth:0.2, pointer:{length:0.6, color:'#fff'}, colorStart:col, strokeColor:'#333' });
-  gT = new Gauge(document.getElementById("gTemp")).setOptions(opt('#f43f5e')); gT.maxValue=60; gT.set(0);
-  gH = new Gauge(document.getElementById("gHum")).setOptions(opt('#00d2ff')); gH.maxValue=100; gH.set(0);
-}
-
-function listenSensores(uid){
-  uidSelecionado = uid;
-  db.ref("/clientes/"+uid+"/dados_atuais").on("value", snap => {
-    const d = snap.val() || {temp:0, hum:0};
-    gT.set(d.temp); gH.set(d.hum);
-    document.getElementById("tempVal").innerText = d.temp + "°C";
-    document.getElementById("humVal").innerText = d.hum + "%";
-  });
-}
-
-function verHistorico(){
-  if(!uidSelecionado) return alert("Selecione um cliente");
-  window.location.href = "historico.html?uid=" + uidSelecionado;
-}
-
-auth.onAuthStateChanged(user => {
-  if(!user) window.location.href = "index.html";
-  else {
-    iniciarGauges();
-    db.ref("/clientes").once("value", snap => {
-      const sel = document.getElementById("selectCliente");
-      snap.forEach(c => {
-        const opt = document.createElement("option");
-        opt.value = c.key; opt.text = c.val().nome || c.key;
-        sel.appendChild(opt);
-      });
-      if(sel.options.length > 0) listenSensores(sel.value);
-      sel.onchange = () => listenSensores(sel.value);
+    auth.onAuthStateChanged(user => {
+        if(!user) { window.location.replace("index.html"); return; }
+        document.getElementById("sub").innerText = user.email;
+        verificarPermissoes(user.uid);
     });
-  }
-});
+
+    function verificarPermissoes(uid) {
+        db.ref(`usuarios/${uid}`).on('value', snap => {
+            const dados = snap.val();
+            if(!dados) return;
+
+            if(dados.status === "bloqueado") {
+                alert("ACESSO BLOQUEADO. Entre em contato com o suporte.");
+                sair();
+                return;
+            }
+
+            if(dados.role === "master") {
+                renderizarMaster();
+            } else {
+                renderizarCliente(dados.sensores || []);
+            }
+        });
+    }
+
+    // Visão do Cliente: Vê apenas os sensores dele
+    function renderizarCliente(listaIds) {
+        document.getElementById("title").innerText = "Meus Sensores";
+        const grid = document.getElementById("grid");
+        grid.innerHTML = "";
+        
+        if(listaIds.length === 0) grid.innerHTML = "<p>Nenhum sensor vinculado.</p>";
+
+        listaIds.forEach(id => {
+            db.ref(`sensores/${id}`).on('value', sSnap => {
+                criarOuAtualizarCard(id, sSnap.val());
+            });
+        });
+    }
+
+    // Visão Master: Vê absolutamente tudo
+    function renderizarMaster() {
+        document.getElementById("title").innerText = "Administração Global";
+        document.getElementById("masterZone").style.display = "block";
+        
+        db.ref('sensores').on('value', snap => {
+            document.getElementById("grid").innerHTML = "";
+            snap.forEach(child => {
+                criarOuAtualizarCard(child.key, child.val());
+            });
+        });
+    }
+
+    function criarOuAtualizarCard(id, data) {
+        if(!data) return;
+        let card = document.getElementById(`card-${id}`);
+        if(!card) {
+            card = document.createElement("div");
+            card.id = `card-${id}`;
+            card.className = "sensor-card";
+            document.getElementById("grid").appendChild(card);
+        }
+
+        card.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
+                <strong style="color:var(--accent)">ID: ${id}</strong>
+                <span style="font-size:10px; background:#2ed573; padding:3px 8px; border-radius:5px">ATIVO</span>
+            </div>
+            <h2 style="margin:0 0 20px 0">${data.nome || 'Sensor s/ Nome'}</h2>
+            <div style="display:flex; justify-content:space-between">
+                <div><small>TEMPERATURA</small><div class="val">${data.temp}°C</div></div>
+                <div><small>UMIDADE</small><div class="val">${data.hum}%</div></div>
+            </div>
+            <button onclick="irHistorico('${id}')" style="width:100%; margin-top:20px; background:transparent; border:1px solid #2e374a; color:white; padding:10px; border-radius:8px; cursor:pointer">Ver Histórico</button>
+        `;
+    }
+
+    function novoCliente() {
+        const email = prompt("E-mail do Cliente:");
+        const uid = prompt("UID do Cliente (Pegue no Firebase Auth):");
+        if(email && uid) {
+            db.ref(`usuarios/${uid}`).set({
+                email: email,
+                role: "cliente",
+                status: "ativo",
+                sensores: []
+            });
+            alert("Cliente cadastrado com sucesso!");
+        }
+    }
+
+    function vincularSensor() {
+        const uid = prompt("UID do Cliente:");
+        const sensorId = prompt("ID do Sensor (ex: sensor_01):");
+        if(uid && sensorId) {
+            db.ref(`usuarios/${uid}/sensores`).once('value', snap => {
+                let lista = snap.val() || [];
+                if(!lista.includes(sensorId)) {
+                    lista.push(sensorId);
+                    db.ref(`usuarios/${uid}/sensores`).set(lista);
+                    alert("Sensor vinculado!");
+                }
+            });
+        }
+    }
+
+    function irHistorico(id) { window.location.href = `historico.html?id=${id}`; }
+    function sair() { auth.signOut().then(() => window.location.replace("index.html")); }
 </script>
 </body>
 </html>
