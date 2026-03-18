@@ -1,72 +1,53 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>NewEnergy | Secure Login</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    :root { --bg-dark: #0b0f1b; --card-bg: #161b2d; --accent: #00d2ff; --accent-hover: #0099cc; --text-main: #ffffff; --text-muted: #8fa3c6; --error: #ff5722; }
-    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg-dark); background-image: radial-gradient(circle at 50% 50%, #1a233a 0%, #0b0f1b 100%); color: var(--text-main); display: flex; justify-content: center; align-items: center; height: 100vh; padding: 15px; }
-    .card { background: var(--card-bg); border-radius: 24px; padding: 35px 25px; width: 100%; max-width: 380px; box-shadow: 0 25px 50px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.05); text-align: center; backdrop-filter: blur(10px); }
-    .logo-badge { font-size: 12px; text-transform: uppercase; letter-spacing: 5px; color: var(--accent); margin-bottom: 10px; font-weight: 800; }
-    h1 { font-size: 28px; font-weight: 800; margin: 0 0 10px 0; }
-    p { color: var(--text-muted); font-size: 14px; margin-bottom: 25px; }
-    .input-group { margin-bottom: 15px; text-align: left; }
-    label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-left: 5px; }
-    input { width: 100%; padding: 16px; margin-top: 5px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; box-sizing: border-box; }
-    button { width: 100%; padding: 16px; background: var(--accent); color: #0b0f1b; border: none; border-radius: 14px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 20px; transition: 0.3s; }
-    button:hover { background: var(--accent-hover); transform: translateY(-2px); }
-    #error { font-size: 13px; color: var(--error); background: rgba(255, 87, 34, 0.1); padding: 10px; border-radius: 10px; margin-bottom: 15px; display: none; }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>NewEnergy | Login Seguro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg: #0b0f1b; --card: #161b2d; --accent: #00d2ff; --text: #ffffff; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .card { background: var(--card); border-radius: 24px; padding: 40px; width: 100%; max-width: 350px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 12px; border: 1px solid #2e374a; background: #0b0f1b; color: white; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; border-radius: 12px; border: none; background: var(--accent); color: #0b0f1b; font-weight: 800; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        #msg { color: #ff4757; font-size: 14px; margin-top: 10px; display: none; }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo-badge">Security Portal</div>
-    <h1>NewEnergy</h1>
-    <p>Acesse o monitoramento industrial</p>
-    <div id="error"></div>
-    <div class="input-group">
-      <label>E-mail Corporativo</label>
-      <input type="email" id="email" placeholder="nome@empresa.com">
+    <div class="card">
+        <h1 style="margin:0">NewEnergy</h1>
+        <p style="color: #8fa3c6;">Monitoramento Industrial</p>
+        <input type="email" id="email" placeholder="E-mail">
+        <input type="password" id="pass" placeholder="Senha">
+        <button onclick="login()">Entrar no Sistema</button>
+        <div id="msg"></div>
     </div>
-    <div class="input-group">
-      <label>Senha de Acesso</label>
-      <input type="password" id="password" placeholder="••••••••">
-    </div>
-    <button type="button" id="btnLogin">Autenticar Sistema</button>
-  </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-      authDomain: "telemetriasut1.firebaseapp.com",
-      databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-      projectId: "telemetriasut1",
-      storageBucket: "telemetriasut1.firebasestorage.app",
-      messagingSenderId: "591416281880",
-      appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+            authDomain: "telemetriasut1.firebaseapp.com",
+            databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+            projectId: "telemetriasut1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
 
-    auth.onAuthStateChanged(user => { if (user) window.location.href = "painel.html"; });
+        auth.onAuthStateChanged(user => { if(user) window.location.href = "painel.html"; });
 
-    document.getElementById("btnLogin").addEventListener("click", () => {
-      const email = document.getElementById("email").value.trim();
-      const pass = document.getElementById("password").value.trim();
-      if(!email || !pass) { showError("Preencha todos os campos."); return; }
-      
-      auth.signInWithEmailAndPassword(email, pass)
-        .catch(err => showError("Credenciais inválidas."));
-    });
-
-    function showError(msg){
-      const e = document.getElementById("error");
-      e.textContent = msg; e.style.display = "block";
-    }
-  </script>
+        function login() {
+            const e = document.getElementById("email").value;
+            const p = document.getElementById("pass").value;
+            auth.signInWithEmailAndPassword(e, p).catch(err => {
+                const m = document.getElementById("msg");
+                m.innerText = "Acesso negado ou erro de conexão.";
+                m.style.display = "block";
+            });
+        }
+    </script>
 </body>
 </html>
