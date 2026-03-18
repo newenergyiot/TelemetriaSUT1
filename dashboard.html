@@ -1,0 +1,51 @@
+<script>
+// 1. Pegar o ID do sensor que veio do painel.html
+const urlParams = new URLSearchParams(window.location.search);
+const idSensor = urlParams.get('id');
+
+if(!idSensor) { window.location.href = "painel.html"; }
+
+// 2. Modificar as funções de escuta do Firebase para usar o idSensor
+function rodarDashboard() {
+    // ... seus códigos de Gauge aqui ...
+
+    // Escuta apenas o sensor selecionado
+    db.ref(`sensores/${idSensor}/temp`).on("value", s => { 
+        const v = parseFloat(s.val()); 
+        gT.set(v); 
+        document.getElementById("tempVal").innerText = v.toFixed(1) + "°C";
+        analisarAlertas(); 
+    });
+
+    db.ref(`sensores/${idSensor}/hum`).on("value", s => { 
+        const v = parseFloat(s.val()); 
+        gH.set(v); 
+        document.getElementById("humVal").innerText = v.toFixed(1) + "%";
+        analisarAlertas(); 
+    });
+
+    db.ref(`sensores/${idSensor}/led`).on("value", s => {
+        const on = s.val() == 1;
+        const b = document.getElementById("btnLED");
+        b.innerText = on ? "DESLIGAR ILUMINAÇÃO" : "LIGAR ILUMINAÇÃO";
+        b.className = "btn-action btn-led " + (on ? "on" : "off");
+    });
+}
+
+// 3. Salvar configurações na pasta correta
+function salvarConfig() {
+    const updates = {
+        tMin: parseFloat(document.getElementById("tMin").value),
+        tMax: parseFloat(document.getElementById("tMax").value),
+        // ... outros campos ...
+    };
+    // Salva na pasta do sensor específico
+    db.ref(`config_alertas/${idSensor}`).update(updates).then(() => {
+        alert("Configurações do " + idSensor + " atualizadas!");
+        fecharAdmin();
+    });
+}
+
+// 4. No botão de histórico, passe o ID adiante
+// <button onclick="location.href='historico.html?id=' + idSensor">Relatórios</button>
+</script>
