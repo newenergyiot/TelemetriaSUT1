@@ -6,18 +6,25 @@
     <title>NewEnergy | Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; --danger:#ff4757; }
+        :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; --danger:#ff4757; --success:#2ed573; }
         body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); padding:20px; }
-        .container { max-width: 1100px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        .master-zone { background: rgba(0, 210, 255, 0.05); padding: 20px; border-radius: 20px; border: 1px dashed var(--accent); margin-bottom: 30px; display: none; }
-        .sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .sensor-card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .val { font-size: 32px; font-weight: 800; color: var(--accent); }
-        .btn { padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; transition: 0.3s; }
-        .btn-master { background: var(--accent); color: #0b0f1b; margin-right: 10px; }
-        .btn-off { background: var(--danger); color: white; }
-        select, input { padding: 10px; border-radius: 8px; border: 1px solid #2e374a; background: #0b0f1b; color: white; }
+        .container { max-width: 1200px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #2e374a; padding-bottom: 20px; }
+        
+        /* Area Administrativa Master */
+        .admin-panel { background: linear-gradient(135deg, rgba(0, 210, 255, 0.1) 0%, rgba(22, 27, 45, 1) 100%); padding: 25px; border-radius: 20px; border: 1px solid var(--accent); margin-bottom: 30px; display: none; }
+        
+        /* Grid de Sensores */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .card-sensor { background: var(--card); border-radius: 22px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
+        .card-sensor:hover { border-color: var(--accent); transform: translateY(-5px); }
+        .val { font-size: 36px; font-weight: 800; color: var(--accent); margin: 10px 0; }
+        
+        .btn { padding: 12px 18px; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; transition: 0.2s; }
+        .btn-logout { background: var(--danger); color: white; }
+        .btn-master { background: var(--accent); color: #0b0f1b; font-size: 13px; margin-right: 8px; margin-bottom: 8px; }
+        
+        small { color: #8fa3c6; text-transform: uppercase; font-size: 10px; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -25,24 +32,24 @@
 <div class="container">
     <div class="header">
         <div>
-            <h1 id="title">Carregando...</h1>
-            <p id="sub" style="color:#8fa3c6; margin:0"></p>
+            <h1 id="userLevel" style="margin:0">Carregando...</h1>
+            <p id="userMail" style="color:#8fa3c6; margin:5px 0 0 0;"></p>
         </div>
-        <button class="btn btn-off" onclick="sair()">Sair</button>
+        <button class="btn btn-logout" onclick="logout()">Sair</button>
     </div>
 
-    <div id="masterZone" class="master-zone">
-        <h3 style="margin-top:0">Controle Master (Escala de Clientes)</h3>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn btn-master" onclick="novoCliente()">+ Cadastrar Cliente</button>
-            <button class="btn btn-master" onclick="vincularSensor()">+ Vincular Sensor</button>
-            <select id="filtroCliente" onchange="trocarVisao(this.value)">
-                <option value="todos">Visualizar Todos os Sensores</option>
-            </select>
+    <div id="masterControls" class="admin-panel">
+        <h3 style="margin-top:0; color:var(--accent)">Painel de Controle Master</h3>
+        <div style="display:flex; flex-wrap:wrap;">
+            <button class="btn btn-master" onclick="cadastrarCliente()">+ Cadastrar Novo Cliente</button>
+            <button class="btn btn-master" onclick="vincularSensor()">+ Vincular Sensor ao UID</button>
+            <button class="btn btn-master" onclick="alternarStatus()" style="background:#ffa502">Bloquear/Desbloquear Conta</button>
         </div>
     </div>
 
-    <div id="grid" class="sensor-grid"></div>
+    <div id="sensorGrid" class="grid">
+        <p>Sincronizando com nuvem...</p>
+    </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -57,117 +64,111 @@
         projectId: "telemetriasut1"
     };
     firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
     const db = firebase.database();
+    const auth = firebase.auth();
 
     auth.onAuthStateChanged(user => {
         if(!user) { window.location.replace("index.html"); return; }
-        document.getElementById("sub").innerText = user.email;
-        verificarPermissoes(user.uid);
+        document.getElementById("userMail").innerText = user.email;
+        carregarAcesso(user.uid);
     });
 
-    function verificarPermissoes(uid) {
+    function carregarAcesso(uid) {
         db.ref(`usuarios/${uid}`).on('value', snap => {
-            const dados = snap.val();
-            if(!dados) return;
+            const user = snap.val();
+            if(!user) return;
 
-            if(dados.status === "bloqueado") {
-                alert("ACESSO BLOQUEADO. Entre em contato com o suporte.");
-                sair();
+            if(user.status === "bloqueado") {
+                alert("ACESSO SUSPENSO POR PAGAMENTO.");
+                logout();
                 return;
             }
 
-            if(dados.role === "master") {
-                renderizarMaster();
+            if(user.role === "master") {
+                document.getElementById("userLevel").innerText = "Gestão Global NewEnergy";
+                document.getElementById("masterControls").style.display = "block";
+                monitorarTudoMaster();
             } else {
-                renderizarCliente(dados.sensores || []);
+                document.getElementById("userLevel").innerText = "Meus Sensores";
+                monitorarSensoresCliente(user.sensores || []);
             }
         });
     }
 
-    // Visão do Cliente: Vê apenas os sensores dele
-    function renderizarCliente(listaIds) {
-        document.getElementById("title").innerText = "Meus Sensores";
-        const grid = document.getElementById("grid");
-        grid.innerHTML = "";
+    // CLIENTE: Escuta apenas os IDs listados no seu perfil
+    function monitorarSensoresCliente(listaIds) {
+        const grid = document.getElementById("sensorGrid");
+        grid.innerHTML = (listaIds.length === 0) ? "<p>Nenhum dispositivo encontrado.</p>" : "";
         
-        if(listaIds.length === 0) grid.innerHTML = "<p>Nenhum sensor vinculado.</p>";
-
         listaIds.forEach(id => {
-            db.ref(`sensores/${id}`).on('value', sSnap => {
-                criarOuAtualizarCard(id, sSnap.val());
+            db.ref(`sensores/${id}`).on('value', snap => {
+                atualizarInterface(id, snap.val());
             });
         });
     }
 
-    // Visão Master: Vê absolutamente tudo
-    function renderizarMaster() {
-        document.getElementById("title").innerText = "Administração Global";
-        document.getElementById("masterZone").style.display = "block";
-        
+    // MASTER: Escuta a raiz 'sensores' (Vê todos)
+    function monitorarTudoMaster() {
         db.ref('sensores').on('value', snap => {
-            document.getElementById("grid").innerHTML = "";
-            snap.forEach(child => {
-                criarOuAtualizarCard(child.key, child.val());
+            document.getElementById("sensorGrid").innerHTML = "";
+            snap.forEach(s => {
+                atualizarInterface(s.key, s.val());
             });
         });
     }
 
-    function criarOuAtualizarCard(id, data) {
-        if(!data) return;
+    function atualizarInterface(id, dados) {
+        if(!dados) return;
         let card = document.getElementById(`card-${id}`);
         if(!card) {
             card = document.createElement("div");
             card.id = `card-${id}`;
-            card.className = "sensor-card";
-            document.getElementById("grid").appendChild(card);
+            card.className = "card-sensor";
+            document.getElementById("sensorGrid").appendChild(card);
         }
-
         card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px">
-                <strong style="color:var(--accent)">ID: ${id}</strong>
-                <span style="font-size:10px; background:#2ed573; padding:3px 8px; border-radius:5px">ATIVO</span>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <strong style="font-size:14px">${dados.nome || id}</strong>
+                <div style="width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow: 0 0 10px var(--success)"></div>
             </div>
-            <h2 style="margin:0 0 20px 0">${data.nome || 'Sensor s/ Nome'}</h2>
-            <div style="display:flex; justify-content:space-between">
-                <div><small>TEMPERATURA</small><div class="val">${data.temp}°C</div></div>
-                <div><small>UMIDADE</small><div class="val">${data.hum}%</div></div>
+            <div style="display:flex; justify-content:space-between; margin-top:20px">
+                <div><small>Temp</small><div class="val">${dados.temp}°C</div></div>
+                <div><small>Umid</small><div class="val">${dados.hum}%</div></div>
             </div>
-            <button onclick="irHistorico('${id}')" style="width:100%; margin-top:20px; background:transparent; border:1px solid #2e374a; color:white; padding:10px; border-radius:8px; cursor:pointer">Ver Histórico</button>
+            <button class="btn" style="width:100%; margin-top:20px; background:rgba(255,255,255,0.05); color:white; border:1px solid #2e374a" onclick="verLogs('${id}')">Histórico</button>
         `;
     }
 
-    function novoCliente() {
+    // FUNÇÕES MASTER (EXCLUSIVAS)
+    function cadastrarCliente() {
         const email = prompt("E-mail do Cliente:");
-        const uid = prompt("UID do Cliente (Pegue no Firebase Auth):");
-        if(email && uid) {
-            db.ref(`usuarios/${uid}`).set({
-                email: email,
-                role: "cliente",
-                status: "ativo",
-                sensores: []
-            });
-            alert("Cliente cadastrado com sucesso!");
-        }
+        const uid = prompt("UID do Firebase Auth:");
+        if(uid) db.ref(`usuarios/${uid}`).set({ email: email, role: "cliente", status: "ativo", sensores: [] });
     }
 
     function vincularSensor() {
         const uid = prompt("UID do Cliente:");
-        const sensorId = prompt("ID do Sensor (ex: sensor_01):");
-        if(uid && sensorId) {
+        const sensor = prompt("ID do Sensor (ex: sensor_01):");
+        if(uid && sensor) {
             db.ref(`usuarios/${uid}/sensores`).once('value', snap => {
                 let lista = snap.val() || [];
-                if(!lista.includes(sensorId)) {
-                    lista.push(sensorId);
+                if(!lista.includes(sensor)) {
+                    lista.push(sensor);
                     db.ref(`usuarios/${uid}/sensores`).set(lista);
-                    alert("Sensor vinculado!");
+                    alert("Sensor adicionado ao cliente!");
                 }
             });
         }
     }
 
-    function irHistorico(id) { window.location.href = `historico.html?id=${id}`; }
-    function sair() { auth.signOut().then(() => window.location.replace("index.html")); }
+    function alternarStatus() {
+        const uid = prompt("UID para Bloquear/Desbloquear:");
+        const status = prompt("Escreva 'ativo' ou 'bloqueado':");
+        if(uid) db.ref(`usuarios/${uid}/status`).set(status);
+    }
+
+    function verLogs(id) { window.location.href = `historico.html?id=${id}`; }
+    function logout() { auth.signOut().then(() => window.location.replace("index.html")); }
 </script>
 </body>
 </html>
