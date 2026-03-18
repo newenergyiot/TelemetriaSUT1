@@ -7,21 +7,22 @@
     <style>
         :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; }
         body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); display:flex; justify-content:center; align-items:center; height:100vh; }
-        .card { background: var(--card); border-radius: 20px; padding: 40px; width: 320px; text-align: center; }
+        .card { background: var(--card); border-radius: 20px; padding: 40px; width: 320px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); }
         .val { font-size: 48px; font-weight: 800; color: var(--accent); margin: 20px 0; }
-        .btn { width: 100%; padding: 12px; border-radius: 8px; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); font-weight: 700; cursor: pointer; margin-top: 10px; }
+        .btn { width: 100%; padding: 12px; border-radius: 8px; border: 1.5px solid var(--accent); background: transparent; color: var(--accent); font-weight: 700; cursor: pointer; margin-top: 10px; transition: 0.3s; }
+        .btn:hover { background: var(--accent); color: #0b0f1b; }
     </style>
 </head>
 <body>
     <div class="card">
-        <div style="display:flex; justify-content: space-between; font-size: 12px;">
-            <a href="painel.html" style="color:var(--accent); text-decoration:none;">< Voltar</a>
-            <span id="sensorID">--</span>
+        <div style="display:flex; justify-content: space-between; font-size: 11px; margin-bottom: 20px;">
+            <a href="painel.html" style="color:var(--accent); text-decoration:none;">❮ VOLTAR</a>
+            <span id="sensorID" style="color: #64748b">--</span>
         </div>
-        <h2 id="sensorNome">Carregando...</h2>
+        <h2 id="sensorNome" style="margin: 0;">Carregando...</h2>
         <div id="displayVal" class="val">--°C</div>
-        <div id="humVal" style="font-size: 18px; margin-bottom: 20px;">--% Humidade</div>
-        <button class="btn" onclick="abrirHistorico()">VER HISTÓRICO</button>
+        <div id="humVal" style="font-size: 18px; margin-bottom: 25px; color: #64748b">--% Umidade</div>
+        <button class="btn" onclick="abrirHistorico()">RELATÓRIO DE PERFORMANCE</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -35,17 +36,21 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const id = new URLSearchParams(window.location.search).get('id');
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
 
         if(!id) window.location.href = "painel.html";
-        document.getElementById("sensorID").innerText = id;
+        document.getElementById("sensorID").innerText = "ID: " + id;
 
         db.ref(`sensores/${id}`).on('value', snap => {
             const data = snap.val();
-            if(!data) return;
+            if(!data) {
+                document.getElementById("sensorNome").innerText = "Não encontrado";
+                return;
+            }
             document.getElementById("sensorNome").innerText = data.nome || id;
-            document.getElementById("displayVal").innerText = (data.temp || 0) + "°C";
-            document.getElementById("humVal").innerText = (data.hum || 0) + "% Umidade";
+            document.getElementById("displayVal").innerText = (data.temp || 0).toFixed(1) + "°C";
+            document.getElementById("humVal").innerText = (data.hum || 0).toFixed(1) + "% Umidade";
         });
 
         function abrirHistorico() { window.location.href = `historico.html?id=${id}`; }
