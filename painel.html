@@ -2,129 +2,115 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>NewEnergy | Dashboard</title>
+    <title>NewEnergy | Monitoramento Central</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; --danger:#ff4757; --success:#2ed573; }
+        :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; }
         body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); padding:20px; }
-        .container { max-width: 1200px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #2e374a; padding-bottom: 20px; }
-        .admin-panel { background: rgba(0, 210, 255, 0.05); padding: 20px; border-radius: 20px; border: 1px dashed var(--accent); margin-bottom: 30px; display: none; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .card-sensor { background: var(--card); border-radius: 22px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .val { font-size: 36px; font-weight: 800; color: var(--accent); margin: 10px 0; }
-        .btn { padding: 12px 18px; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; transition: 0.2s; }
-        .btn-logout { background: var(--danger); color: white; }
-        .btn-master { background: var(--accent); color: #0b0f1b; font-size: 13px; margin-right: 8px; }
-        small { color: #8fa3c6; text-transform: uppercase; font-size: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top:20px; }
+        .card { background: var(--card); border-radius: 20px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .admin-bar { background: rgba(0,210,255,0.1); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: none; border: 1px solid var(--accent); }
+        .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; background: var(--accent); color: #0b0f1b; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <div class="header">
-        <div>
-            <h1 id="userLevel">NewEnergy IoT</h1>
-            <p id="userMail" style="color:#8fa3c6; margin:5px 0 0 0;"></p>
-        </div>
-        <button class="btn btn-logout" onclick="logout()">Sair</button>
+    <div class="header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h1 id="boasVindas">Carregando...</h1>
+        <button onclick="auth.signOut()" class="btn" style="background:#ff4757; color:#fff">Sair</button>
     </div>
 
-    <div id="masterControls" class="admin-panel">
-        <h3 style="margin:0 0 15px 0; color:var(--accent)">Controle de Clientes (Master)</h3>
-        <button class="btn btn-master" onclick="vincularNovo()">+ Vincular Novo Cliente</button>
+    <div id="painelAdmin" class="admin-bar">
+        <strong>Modo Administrador:</strong> 
+        <button class="btn" onclick="vincularSensor()">Vincular Sensor a Cliente</button>
+        <button class="btn" onclick="gerenciarUsuarios()">Gerenciar Usuários</button>
     </div>
 
-    <div id="sensorGrid" class="grid">
-        <p>Buscando dados no Firebase...</p>
-    </div>
-</div>
+    <div id="containerSensores" class="grid"></div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-        authDomain: "telemetriasut1.firebaseapp.com",
-        databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-        projectId: "telemetriasut1"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    const auth = firebase.auth();
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+            authDomain: "telemetriasut1.firebaseapp.com",
+            databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+            projectId: "telemetriasut1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
 
-    const MEU_UID_MASTER = "dAlN5AysNNNTdtOIS1AwS2vbwH92";
+        // O SEU UID MASTER
+        const MEU_UID_MASTER = "dAlN5AysNNNTdtOIS1AwS2vbwH92";
 
-    auth.onAuthStateChanged(user => {
-        if(!user) { window.location.replace("index.html"); return; }
-        document.getElementById("userMail").innerText = user.email;
-        
-        if(user.uid === MEU_UID_MASTER) {
-            exibirMaster();
-        } else {
-            exibirCliente(user.uid);
-        }
-    });
-
-    // Função para o MASTER ver todos os clientes/sensores
-    function exibirMaster() {
-        document.getElementById("userLevel").innerText = "Gestão Global Master";
-        document.getElementById("masterControls").style.display = "block";
-
-        db.ref('clientes').on('value', snap => {
-            const grid = document.getElementById("sensorGrid");
-            grid.innerHTML = "";
-            snap.forEach(cliente => {
-                desenharCard(cliente.key, cliente.val());
-            });
-        });
-    }
-
-    // Função para o CLIENTE ver apenas o dele
-    function exibirCliente(uid) {
-        document.getElementById("userLevel").innerText = "Meu Monitoramento";
-        db.ref(`clientes/${uid}`).on('value', snap => {
-            const grid = document.getElementById("sensorGrid");
-            grid.innerHTML = "";
-            if(snap.exists()) {
-                desenharCard(uid, snap.val());
+        auth.onAuthStateChanged(user => {
+            if(!user) { window.location.replace("index.html"); return; }
+            
+            if(user.uid === MEU_UID_MASTER) {
+                document.getElementById("boasVindas").innerText = "Olá, Administrador";
+                document.getElementById("painelAdmin").style.display = "block";
+                carregarTudoAdmin();
             } else {
-                grid.innerHTML = "<p>Nenhum sensor vinculado a este e-mail.</p>";
+                document.getElementById("boasVindas").innerText = "Meus Dispositivos";
+                carregarSensoresDoCliente(user.uid);
             }
         });
-    }
 
-    function desenharCard(id, data) {
-        const grid = document.getElementById("sensorGrid");
-        let card = document.createElement("div");
-        card.className = "card-sensor";
-        
-        // Formatação simples para o nome ou ID
-        const nomeExibicao = (id === "1T4r7ERSsshKNZLp5Xx6nGRRIHl1") ? "Cliente Teste 01" : id;
+        // FUNÇÃO DO CLIENTE: Ele só entra na pasta de sensores que o ADMIN autorizou
+        function carregarSensoresDoCliente(uid) {
+            db.ref(`vinculos/${uid}`).on('value', snap => {
+                const container = document.getElementById("containerSensores");
+                container.innerHTML = "";
+                
+                snap.forEach(child => {
+                    const sensorID = child.key; // Ex: sensor_01
+                    // Agora busca os dados REAIS do sensor
+                    db.ref(`sensores/${sensorID}`).on('value', sSnap => {
+                        renderizarCard(sensorID, sSnap.val());
+                    });
+                });
+            });
+        }
 
-        card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong>${nomeExibicao}</strong>
-                <div style="width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow: 0 0 10px var(--success)"></div>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-top:20px">
-                <div><small>Temperatura</small><div class="val">${data.temp || '0'}°C</div></div>
-                <div><small>Umidade</small><div class="val">${data.hum || '0'}%</div></div>
-            </div>
-            <button class="btn" style="width:100%; margin-top:20px; background:rgba(255,255,255,0.05); color:white; border:1px solid #2e374a" 
-                onclick="window.location.href='historico.html?id=${id}'">Ver Detalhes</button>
-        `;
-        grid.appendChild(card);
-    }
+        // FUNÇÃO DO ADMIN: Vê absolutamente todos os sensores
+        function carregarTudoAdmin() {
+            db.ref('sensores').on('value', snap => {
+                const container = document.getElementById("containerSensores");
+                container.innerHTML = "";
+                snap.forEach(s => renderizarCard(s.key, s.val()));
+            });
+        }
 
-    function logout() { auth.signOut().then(() => window.location.replace("index.html")); }
-    
-    function vincularNovo() {
-        alert("Para escalar, adicione o UID do novo cliente no nó 'clientes' do seu Realtime Database.");
-    }
-</script>
+        function renderizarCard(id, dados) {
+            if(!dados) return;
+            let card = document.getElementById(`card-${id}`);
+            if(!card) {
+                card = document.createElement("div");
+                card.id = `card-${id}`;
+                card.className = "card";
+                document.getElementById("containerSensores").appendChild(card);
+            }
+            card.innerHTML = `
+                <h3 style="margin:0">${dados.nome || id}</h3>
+                <div style="font-size:30px; font-weight:800; color:var(--accent); margin:15px 0">
+                    ${dados.temp}°C | ${dados.hum}%
+                </div>
+                <button class="btn" style="width:100%; opacity:0.3" onclick="location.href='historico.html?id=${id}'">Histórico</button>
+            `;
+        }
+
+        // FUNÇÕES DO ADMIN PARA GERENCIAR
+        function vincularSensor() {
+            const uid = prompt("Cole o UID do Cliente:");
+            const sensor = prompt("Cole o ID do Sensor (ex: sensor_01):");
+            if(uid && sensor) {
+                db.ref(`vinculos/${uid}/${sensor}`).set(true);
+                alert("Vinculado com sucesso!");
+            }
+        }
+    </script>
 </body>
 </html>
