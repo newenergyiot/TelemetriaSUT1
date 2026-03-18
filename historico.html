@@ -6,15 +6,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { background: #0b0f1b; color: white; font-family: 'Inter', sans-serif; padding: 20px; }
-        .card { background: #161b2d; padding: 20px; border-radius: 15px; max-width: 600px; margin: auto; }
-        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2e374a; }
+        .card { background: #161b2d; padding: 30px; border-radius: 20px; max-width: 500px; margin: auto; border: 1px solid rgba(255,255,255,0.05); }
+        .item { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2e374a; }
+        .btn-back { background: none; border: none; color: #00d2ff; cursor: pointer; font-weight: bold; margin-bottom: 20px; font-size: 16px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <button onclick="window.history.back()" style="background:none; border:none; color:#00d2ff; cursor:pointer; font-weight:bold; margin-bottom:20px">< Voltar</button>
-        <h2 id="hTitle">Histórico do Sensor</h2>
-        <div id="lista">Carregando logs...</div>
+        <button class="btn-back" onclick="window.history.back()">← Voltar</button>
+        <h2 id="sTitle" style="margin-top:0">Dados de Histórico</h2>
+        <div id="lista">Carregando telemetria...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -29,21 +30,15 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const sensorId = urlParams.get('id');
-
-        if(sensorId) {
-            document.getElementById("hTitle").innerText = "Histórico: " + sensorId;
-            db.ref(`historico/${sensorId}`).limitToLast(50).on('value', snap => {
-                const lista = document.getElementById("lista");
-                lista.innerHTML = "";
+        const id = new URLSearchParams(window.location.search).get('id');
+        if(id) {
+            document.getElementById("sTitle").innerText = "Logs: " + id;
+            db.ref(`historico/${id}`).limitToLast(40).on('value', snap => {
+                const list = document.getElementById("lista");
+                list.innerHTML = "";
                 snap.forEach(child => {
-                    const d = child.val();
-                    lista.innerHTML += `
-                        <div class="item">
-                            <span>${d.data || '---'}</span>
-                            <strong>${d.temp}°C / ${d.hum}%</strong>
-                        </div>`;
+                    const v = child.val();
+                    list.innerHTML += `<div class="item"><span>${v.data || 'Log'}</span><strong>${v.temp}°C / ${v.hum}%</strong></div>`;
                 });
             });
         }
