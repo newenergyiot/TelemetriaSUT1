@@ -1,44 +1,103 @@
-function carregarSensoresCliente(uid) {
-    // Agora o código lê direto da pasta 'clientes' que você postou
-    db.ref(`clientes/${uid}`).on('value', snap => {
-        const grid = document.getElementById("listaSensores");
-        grid.innerHTML = "";
-        
-        if(!snap.exists()) {
-            grid.innerHTML = "<p>Nenhum dado encontrado para o seu UID.</p>";
-            return;
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>NewEnergy | Painel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; }
+        body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); padding:20px; }
+        .header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+        .card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; transition: 0.2s; }
+        .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+        .val { font-size: 32px; font-weight: 800; color: var(--accent); margin: 15px 0; }
+        .status { font-size: 12px; font-weight: bold; display: flex; align-items: center; }
+        .dot { height: 8px; width: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .btn-sair { background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Meus <span style="color:var(--accent)">Dispositivos</span></h1>
+        <button onclick="logout()" class="btn-sair">Sair</button>
+    </div>
+
+    <div id="listaSensores" class="grid">
+        <p>Carregando dados...</p>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+            authDomain: "telemetriasut1.firebaseapp.com",
+            databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+            projectId: "telemetriasut1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        // 1. Monitora se o usuário está logado
+        auth.onAuthStateChanged(user => {
+            if(!user) {
+                window.location.href = "index.html";
+            } else {
+                carregarSensoresCliente(user.uid);
+            }
+        });
+
+        // 2. Busca dados na pasta 'clientes/UID'
+        function carregarSensoresCliente(uid) {
+            db.ref(`clientes/${uid}`).on('value', snap => {
+                const grid = document.getElementById("listaSensores");
+                grid.innerHTML = "";
+                
+                if(!snap.exists()) {
+                    grid.innerHTML = "<p>Nenhum dado encontrado para este dispositivo.</p>";
+                    return;
+                }
+
+                const dados = snap.val();
+                renderCard(uid, dados);
+            });
         }
 
-        // Como seus dados (temp/hum) estão direto no UID do cliente:
-        const dados = snap.val();
-        renderCard(uid, dados);
-    });
-}
+        // 3. Desenha o card na tela
+        function renderCard(id, data) {
+            const grid = document.getElementById("listaSensores");
+            
+            // Lógica de tempo real para o status Online
+            const agora = Math.floor(Date.now() / 1000);
+            const isOnline = data.last_seen ? (agora - data.last_seen < 120) : false;
 
-function renderCard(id, data) {
-    if(!data) return;
-    let card = document.getElementById(`c-${id}`);
-    if(!card) {
-        card = document.createElement("div");
-        card.id = `c-${id}`;
-        card.className = "card";
-        // Ao clicar, ele passa o seu UID como ID do sensor para a próxima tela
-        card.onclick = () => window.location.href = `dashboard.html?id=${id}`;
-        document.getElementById("listaSensores").appendChild(card);
-    }
+            const card = document.createElement("div");
+            card.className = "card";
+            card.onclick = () => window.location.href = `dashboard.html?id=${id}`;
+            
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between">
+                    <strong>Monitor Principal</strong>
+                    <span class="status" style="color:${isOnline ? '#2ed573' : '#ff4757'}">
+                        <span class="dot" style="background:${isOnline ? '#2ed573' : '#ff4757'}"></span>
+                        ${isOnline ? 'ONLINE' : 'OFFLINE'}
+                    </span>
+                </div>
+                <div class="val">${data.temp ? data.temp.toFixed(1) : '0.0'}°C | ${data.hum ? data.hum.toFixed(1) : '0.0'}%</div>
+                <div style="font-size: 10px; color: #64748b">ID do Cliente: ${id}</div>
+            `;
+            grid.appendChild(card);
+        }
 
-    // Verifica se o sensor está online (comparando o last_seen que você enviou)
-    const agora = Math.floor(Date.now() / 1000);
-    const isOnline = (agora - data.last_seen) < 60; // Online se atualizou nos últimos 60s
-
-    card.innerHTML = `
-        <div style="display:flex; justify-content:space-between">
-            <strong>Meu Dispositivo</strong>
-            <span style="color:${isOnline ? '#2ed573' : '#ff4757'}">
-                ● ${isOnline ? 'ONLINE' : 'OFFLINE'}
-            </span>
-        </div>
-        <div class="val">${data.temp || 0}°C | ${data.hum || 0}%</div>
-        <div style="font-size: 10px; color: #64748b">ID: ${id}</div>
-    `;
-}
+        function logout() {
+            auth.signOut().then(() => window.location.href = "index.html");
+        }
+    </script>
+</body>
+</html>
