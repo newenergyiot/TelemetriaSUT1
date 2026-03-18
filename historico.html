@@ -6,15 +6,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body { background: #0b0f1b; color: white; font-family: 'Inter', sans-serif; padding: 20px; }
-        .card { background: #161b2d; padding: 20px; border-radius: 15px; max-width: 500px; margin: auto; border: 1px solid rgba(255,255,255,0.05); }
-        .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2e374a; }
+        .card { background: #161b2d; padding: 25px; border-radius: 15px; max-width: 500px; margin: auto; border: 1px solid rgba(255,255,255,0.05); }
+        .row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2e374a; font-size: 14px; }
+        .back-link { color: #00d2ff; text-decoration: none; font-size: 12px; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body>
     <div class="card">
-        <a href="painel.html" style="color: #00d2ff; text-decoration: none; font-weight: bold;">< Voltar ao Painel</a>
-        <h2 id="title">Relatório</h2>
-        <div id="dados">Buscando histórico...</div>
+        <a href="painel.html" class="back-link">❮ Voltar ao Painel</a>
+        <h2 id="title" style="margin: 20px 0;">Relatório de Logs</h2>
+        <div id="dados">Buscando dados no servidor...</div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -31,17 +32,25 @@
         const id = new URLSearchParams(window.location.search).get('id');
 
         if(id) {
-            document.getElementById("title").innerText = "Logs: " + id;
-            // Busca apenas o histórico do sensor específico
+            document.getElementById("title").innerText = "Logs do Sensor: " + id;
             db.ref(`historico/${id}`).limitToLast(30).on('value', snap => {
                 const div = document.getElementById("dados");
                 div.innerHTML = "";
-                if(!snap.exists()) div.innerHTML = "Sem dados registrados.";
+                if(!snap.exists()) {
+                    div.innerHTML = "<p style='color:#64748b'>Nenhum histórico encontrado para este sensor.</p>";
+                    return;
+                }
                 snap.forEach(child => {
                     const v = child.val();
-                    div.innerHTML += `<div class="row"><span>${v.data || 'Hoje'} ${v.hora || ''}</span><strong>${v.temp}°C / ${v.hum}%</strong></div>`;
+                    div.innerHTML += `
+                        <div class="row">
+                            <span>${v.data || 'Reg.'} ${v.hora || ''}</span>
+                            <strong style="color:#00d2ff">${v.temp}°C / ${v.hum}%</strong>
+                        </div>`;
                 });
             });
+        } else {
+            window.location.href = "painel.html";
         }
     </script>
 </body>
