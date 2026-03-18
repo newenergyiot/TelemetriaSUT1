@@ -2,30 +2,28 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>NewEnergy | Dashboard</title>
+    <title>NewEnergy | Meus Dispositivos</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         :root { --bg:#0b0f1b; --card:#161b2d; --accent:#00d2ff; --text:#fff; }
         body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); padding:20px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top:20px; }
-        .card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
-        .val { font-size: 32px; font-weight: 800; color: var(--accent); margin: 10px 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top:30px; }
+        .card { background: var(--card); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; cursor: pointer; }
+        .card:hover { border-color: var(--accent); transform: translateY(-5px); }
         .admin-bar { background: rgba(0,210,255,0.05); padding: 20px; border-radius: 15px; margin-bottom: 25px; display: none; border: 1px dashed var(--accent); }
         .btn { padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; background: var(--accent); color: #0b0f1b; }
-        .btn-red { background: #ff4757; color: white; }
+        .val { font-size: 28px; font-weight: 800; color: var(--accent); margin: 10px 0; }
     </style>
 </head>
 <body>
-
     <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h1 id="txtStatus" style="margin:0">Carregando...</h1>
-        <button onclick="logout()" class="btn btn-red">Sair</button>
+        <h1 id="txtStatus">Carregando...</h1>
+        <button onclick="auth.signOut()" class="btn" style="background:#ff4757; color:white">Sair</button>
     </div>
 
     <div id="areaAdmin" class="admin-bar">
-        <h3 style="margin-top:0">Configurações de Administrador</h3>
+        <h3>Painel Master</h3>
         <button class="btn" onclick="vincularNovo()">+ Vincular Sensor a Cliente</button>
-        <p style="font-size:12px; color:#8fa3c6; margin-top:10px;">Dica: Use o UID do cliente e o ID do sensor cadastrado.</p>
     </div>
 
     <div id="listaSensores" class="grid"></div>
@@ -44,39 +42,33 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const auth = firebase.auth();
-
         const MEU_UID_MASTER = "dAlN5AysNNNTdtOIS1AwS2vbwH92";
 
         auth.onAuthStateChanged(user => {
             if(!user) { window.location.href = "index.html"; return; }
-            
             if(user.uid === MEU_UID_MASTER) {
-                document.getElementById("txtStatus").innerText = "Gestão Geral NewEnergy";
+                document.getElementById("txtStatus").innerText = "Gestão Geral Master";
                 document.getElementById("areaAdmin").style.display = "block";
-                carregarTudoAdmin();
+                carregarTudoMaster();
             } else {
                 document.getElementById("txtStatus").innerText = "Meus Sensores";
                 carregarSensoresCliente(user.uid);
             }
         });
 
-        // VISÃO CLIENTE
         function carregarSensoresCliente(uid) {
             db.ref(`vinculos/${uid}`).on('value', snap => {
-                document.getElementById("listaSensores").innerHTML = "";
-                if(!snap.exists()) document.getElementById("listaSensores").innerHTML = "Nenhum sensor vinculado.";
-                
+                const grid = document.getElementById("listaSensores");
+                grid.innerHTML = "";
+                if(!snap.exists()) grid.innerHTML = "Nenhum sensor vinculado à sua conta.";
                 snap.forEach(child => {
                     const sID = child.key;
-                    db.ref(`sensores/${sID}`).on('value', sSnap => {
-                        renderCard(sID, sSnap.val());
-                    });
+                    db.ref(`sensores/${sID}`).on('value', sSnap => renderCard(sID, sSnap.val()));
                 });
             });
         }
 
-        // VISÃO MASTER
-        function carregarTudoAdmin() {
+        function carregarTudoMaster() {
             db.ref('sensores').on('value', snap => {
                 document.getElementById("listaSensores").innerHTML = "";
                 snap.forEach(s => renderCard(s.key, s.val()));
@@ -90,16 +82,16 @@
                 card = document.createElement("div");
                 card.id = `c-${id}`;
                 card.className = "card";
+                card.onclick = () => window.location.href = `dashboard.html?id=${id}`;
                 document.getElementById("listaSensores").appendChild(card);
             }
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between">
                     <strong>${data.nome || id}</strong>
-                    <span style="color:#2ed573">● Ativo</span>
+                    <span style="color:#2ed573">● Online</span>
                 </div>
-                <div class="val">${data.temp}°C | ${data.hum}%</div>
-                <button class="btn" style="width:100%; background:rgba(255,255,255,0.05); color:#fff" 
-                onclick="location.href='historico.html?id=${id}'">Histórico Completo</button>
+                <div class="val">${data.temp || 0}°C | ${data.hum || 0}%</div>
+                <small style="color:#8fa3c6">Clique para abrir monitoramento real-time</small>
             `;
         }
 
@@ -108,8 +100,6 @@
             const sensor = prompt("ID do Sensor:");
             if(uid && sensor) db.ref(`vinculos/${uid}/${sensor}`).set(true);
         }
-
-        function logout() { auth.signOut().then(() => window.location.href = "index.html"); }
     </script>
 </body>
 </html>
