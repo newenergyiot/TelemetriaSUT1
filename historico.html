@@ -1,55 +1,52 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>NewEnergy | Histórico</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
-<style>
-  body { background: #0b0f1b; color: #fff; font-family: 'Inter', sans-serif; padding: 20px; }
-  .container { max-width: 600px; margin: auto; }
-  .card { background: #161b2d; padding: 20px; border-radius: 15px; margin-bottom: 10px; }
-  ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
-  li { padding: 8px; border-bottom: 1px solid #333; font-size: 13px; }
-  button { padding: 10px; background: #00d2ff; border: none; border-radius: 8px; cursor: pointer; }
-</style>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <meta charset="UTF-8">
+    <title>NewEnergy | Histórico</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #0b0f1b; color: white; font-family: 'Inter', sans-serif; padding: 20px; }
+        .card { background: #161b2d; padding: 20px; border-radius: 15px; max-width: 600px; margin: auto; }
+        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2e374a; }
+    </style>
 </head>
 <body>
-<div class="container">
-  <h2>Histórico de Leituras</h2>
-  <div class="card">
-    <ul id="listaHistorico"></ul>
-  </div>
-  <button onclick="window.location.href='painel.html'">Voltar</button>
-</div>
+    <div class="card">
+        <button onclick="window.history.back()" style="background:none; border:none; color:#00d2ff; cursor:pointer; font-weight:bold; margin-bottom:20px">< Voltar</button>
+        <h2 id="hTitle">Histórico do Sensor</h2>
+        <div id="lista">Carregando logs...</div>
+    </div>
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
-  authDomain: "telemetriasut1.firebaseapp.com",
-  databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-  projectId: "telemetriasut1"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
+            authDomain: "telemetriasut1.firebaseapp.com",
+            databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
+            projectId: "telemetriasut1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
-const params = new URLSearchParams(window.location.search);
-const uid = params.get("uid");
+        const urlParams = new URLSearchParams(window.location.search);
+        const sensorId = urlParams.get('id');
 
-if(uid) {
-  db.ref("/clientes/" + uid + "/historico/diario").limitToLast(20).on("value", snap => {
-    const list = document.getElementById("listaHistorico");
-    list.innerHTML = "";
-    snap.forEach(s => {
-      const v = s.val();
-      const li = document.createElement("li");
-      li.innerText = `Temp: ${v.temp}°C | Hum: ${v.hum}%`;
-      list.appendChild(li);
-    });
-  });
-}
-</script>
+        if(sensorId) {
+            document.getElementById("hTitle").innerText = "Histórico: " + sensorId;
+            db.ref(`historico/${sensorId}`).limitToLast(50).on('value', snap => {
+                const lista = document.getElementById("lista");
+                lista.innerHTML = "";
+                snap.forEach(child => {
+                    const d = child.val();
+                    lista.innerHTML += `
+                        <div class="item">
+                            <span>${d.data || '---'}</span>
+                            <strong>${d.temp}°C / ${d.hum}%</strong>
+                        </div>`;
+                });
+            });
+        }
+    </script>
 </body>
 </html>
