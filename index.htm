@@ -8,14 +8,16 @@
     <style>
         :root { --bg: #0b0f1b; --card: #161b2d; --accent: #00d2ff; --text: #ffffff; }
         body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .login-card { background: var(--card); border-radius: 20px; padding: 40px; width: 100%; max-width: 320px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+        .login-card { background: var(--card); border-radius: 20px; padding: 40px; width: 100%; max-width: 320px; text-align: center; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #2e374a; background: #0b0f1b; color: white; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0b0f1b; font-weight: 700; cursor: pointer; }
+        button { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: #0b0f1b; font-weight: 700; cursor: pointer; transition: 0.3s; }
+        button:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <h2>NewEnergy IoT</h2>
+        <h2 style="color: var(--accent)">NewEnergy IoT</h2>
+        <p style="font-size: 14px; color: #64748b">Entre para monitorar seus sensores</p>
         <input type="email" id="email" placeholder="E-mail">
         <input type="password" id="pass" placeholder="Senha">
         <button onclick="login()">ENTRAR</button>
@@ -33,14 +35,12 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
 
-        // Se já estiver logado, vai direto para o painel
-        auth.onAuthStateChanged(user => { 
-            if(user) window.location.href = "painel.html"; 
-        });
+        auth.onAuthStateChanged(user => { if(user) window.location.href = "painel.html"; });
 
         function login() {
             const e = document.getElementById("email").value;
             const p = document.getElementById("pass").value;
+            if(!e || !p) return alert("Preencha todos os campos");
             auth.signInWithEmailAndPassword(e, p).catch(err => alert("Erro: " + err.message));
         }
     </script>
