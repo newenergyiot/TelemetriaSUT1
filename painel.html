@@ -10,21 +10,14 @@
         body { margin:0; font-family:'Inter', sans-serif; background:var(--bg); color:var(--text); padding:20px; }
         .container { max-width: 1200px; margin: auto; }
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #2e374a; padding-bottom: 20px; }
-        
-        /* Area Administrativa Master */
-        .admin-panel { background: linear-gradient(135deg, rgba(0, 210, 255, 0.1) 0%, rgba(22, 27, 45, 1) 100%); padding: 25px; border-radius: 20px; border: 1px solid var(--accent); margin-bottom: 30px; display: none; }
-        
-        /* Grid de Sensores */
+        .admin-panel { background: rgba(0, 210, 255, 0.05); padding: 20px; border-radius: 20px; border: 1px dashed var(--accent); margin-bottom: 30px; display: none; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-        .card-sensor { background: var(--card); border-radius: 22px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); transition: 0.3s; }
-        .card-sensor:hover { border-color: var(--accent); transform: translateY(-5px); }
+        .card-sensor { background: var(--card); border-radius: 22px; padding: 25px; border: 1px solid rgba(255,255,255,0.05); }
         .val { font-size: 36px; font-weight: 800; color: var(--accent); margin: 10px 0; }
-        
         .btn { padding: 12px 18px; border: none; border-radius: 12px; cursor: pointer; font-weight: 700; transition: 0.2s; }
         .btn-logout { background: var(--danger); color: white; }
-        .btn-master { background: var(--accent); color: #0b0f1b; font-size: 13px; margin-right: 8px; margin-bottom: 8px; }
-        
-        small { color: #8fa3c6; text-transform: uppercase; font-size: 10px; font-weight: 600; }
+        .btn-master { background: var(--accent); color: #0b0f1b; font-size: 13px; margin-right: 8px; }
+        small { color: #8fa3c6; text-transform: uppercase; font-size: 10px; }
     </style>
 </head>
 <body>
@@ -32,23 +25,19 @@
 <div class="container">
     <div class="header">
         <div>
-            <h1 id="userLevel" style="margin:0">Carregando...</h1>
+            <h1 id="userLevel">NewEnergy IoT</h1>
             <p id="userMail" style="color:#8fa3c6; margin:5px 0 0 0;"></p>
         </div>
         <button class="btn btn-logout" onclick="logout()">Sair</button>
     </div>
 
     <div id="masterControls" class="admin-panel">
-        <h3 style="margin-top:0; color:var(--accent)">Painel de Controle Master</h3>
-        <div style="display:flex; flex-wrap:wrap;">
-            <button class="btn btn-master" onclick="cadastrarCliente()">+ Cadastrar Novo Cliente</button>
-            <button class="btn btn-master" onclick="vincularSensor()">+ Vincular Sensor ao UID</button>
-            <button class="btn btn-master" onclick="alternarStatus()" style="background:#ffa502">Bloquear/Desbloquear Conta</button>
-        </div>
+        <h3 style="margin:0 0 15px 0; color:var(--accent)">Controle de Clientes (Master)</h3>
+        <button class="btn btn-master" onclick="vincularNovo()">+ Vincular Novo Cliente</button>
     </div>
 
     <div id="sensorGrid" class="grid">
-        <p>Sincronizando com nuvem...</p>
+        <p>Buscando dados no Firebase...</p>
     </div>
 </div>
 
@@ -67,108 +56,75 @@
     const db = firebase.database();
     const auth = firebase.auth();
 
+    const MEU_UID_MASTER = "dAlN5AysNNNTdtOIS1AwS2vbwH92";
+
     auth.onAuthStateChanged(user => {
         if(!user) { window.location.replace("index.html"); return; }
         document.getElementById("userMail").innerText = user.email;
-        carregarAcesso(user.uid);
+        
+        if(user.uid === MEU_UID_MASTER) {
+            exibirMaster();
+        } else {
+            exibirCliente(user.uid);
+        }
     });
 
-    function carregarAcesso(uid) {
-        db.ref(`usuarios/${uid}`).on('value', snap => {
-            const user = snap.val();
-            if(!user) return;
+    // Função para o MASTER ver todos os clientes/sensores
+    function exibirMaster() {
+        document.getElementById("userLevel").innerText = "Gestão Global Master";
+        document.getElementById("masterControls").style.display = "block";
 
-            if(user.status === "bloqueado") {
-                alert("ACESSO SUSPENSO POR PAGAMENTO.");
-                logout();
-                return;
-            }
+        db.ref('clientes').on('value', snap => {
+            const grid = document.getElementById("sensorGrid");
+            grid.innerHTML = "";
+            snap.forEach(cliente => {
+                desenharCard(cliente.key, cliente.val());
+            });
+        });
+    }
 
-            if(user.role === "master") {
-                document.getElementById("userLevel").innerText = "Gestão Global NewEnergy";
-                document.getElementById("masterControls").style.display = "block";
-                monitorarTudoMaster();
+    // Função para o CLIENTE ver apenas o dele
+    function exibirCliente(uid) {
+        document.getElementById("userLevel").innerText = "Meu Monitoramento";
+        db.ref(`clientes/${uid}`).on('value', snap => {
+            const grid = document.getElementById("sensorGrid");
+            grid.innerHTML = "";
+            if(snap.exists()) {
+                desenharCard(uid, snap.val());
             } else {
-                document.getElementById("userLevel").innerText = "Meus Sensores";
-                monitorarSensoresCliente(user.sensores || []);
+                grid.innerHTML = "<p>Nenhum sensor vinculado a este e-mail.</p>";
             }
         });
     }
 
-    // CLIENTE: Escuta apenas os IDs listados no seu perfil
-    function monitorarSensoresCliente(listaIds) {
+    function desenharCard(id, data) {
         const grid = document.getElementById("sensorGrid");
-        grid.innerHTML = (listaIds.length === 0) ? "<p>Nenhum dispositivo encontrado.</p>" : "";
+        let card = document.createElement("div");
+        card.className = "card-sensor";
         
-        listaIds.forEach(id => {
-            db.ref(`sensores/${id}`).on('value', snap => {
-                atualizarInterface(id, snap.val());
-            });
-        });
-    }
+        // Formatação simples para o nome ou ID
+        const nomeExibicao = (id === "1T4r7ERSsshKNZLp5Xx6nGRRIHl1") ? "Cliente Teste 01" : id;
 
-    // MASTER: Escuta a raiz 'sensores' (Vê todos)
-    function monitorarTudoMaster() {
-        db.ref('sensores').on('value', snap => {
-            document.getElementById("sensorGrid").innerHTML = "";
-            snap.forEach(s => {
-                atualizarInterface(s.key, s.val());
-            });
-        });
-    }
-
-    function atualizarInterface(id, dados) {
-        if(!dados) return;
-        let card = document.getElementById(`card-${id}`);
-        if(!card) {
-            card = document.createElement("div");
-            card.id = `card-${id}`;
-            card.className = "card-sensor";
-            document.getElementById("sensorGrid").appendChild(card);
-        }
         card.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <strong style="font-size:14px">${dados.nome || id}</strong>
+                <strong>${nomeExibicao}</strong>
                 <div style="width:8px; height:8px; border-radius:50%; background:var(--success); box-shadow: 0 0 10px var(--success)"></div>
             </div>
             <div style="display:flex; justify-content:space-between; margin-top:20px">
-                <div><small>Temp</small><div class="val">${dados.temp}°C</div></div>
-                <div><small>Umid</small><div class="val">${dados.hum}%</div></div>
+                <div><small>Temperatura</small><div class="val">${data.temp || '0'}°C</div></div>
+                <div><small>Umidade</small><div class="val">${data.hum || '0'}%</div></div>
             </div>
-            <button class="btn" style="width:100%; margin-top:20px; background:rgba(255,255,255,0.05); color:white; border:1px solid #2e374a" onclick="verLogs('${id}')">Histórico</button>
+            <button class="btn" style="width:100%; margin-top:20px; background:rgba(255,255,255,0.05); color:white; border:1px solid #2e374a" 
+                onclick="window.location.href='historico.html?id=${id}'">Ver Detalhes</button>
         `;
+        grid.appendChild(card);
     }
 
-    // FUNÇÕES MASTER (EXCLUSIVAS)
-    function cadastrarCliente() {
-        const email = prompt("E-mail do Cliente:");
-        const uid = prompt("UID do Firebase Auth:");
-        if(uid) db.ref(`usuarios/${uid}`).set({ email: email, role: "cliente", status: "ativo", sensores: [] });
-    }
-
-    function vincularSensor() {
-        const uid = prompt("UID do Cliente:");
-        const sensor = prompt("ID do Sensor (ex: sensor_01):");
-        if(uid && sensor) {
-            db.ref(`usuarios/${uid}/sensores`).once('value', snap => {
-                let lista = snap.val() || [];
-                if(!lista.includes(sensor)) {
-                    lista.push(sensor);
-                    db.ref(`usuarios/${uid}/sensores`).set(lista);
-                    alert("Sensor adicionado ao cliente!");
-                }
-            });
-        }
-    }
-
-    function alternarStatus() {
-        const uid = prompt("UID para Bloquear/Desbloquear:");
-        const status = prompt("Escreva 'ativo' ou 'bloqueado':");
-        if(uid) db.ref(`usuarios/${uid}/status`).set(status);
-    }
-
-    function verLogs(id) { window.location.href = `historico.html?id=${id}`; }
     function logout() { auth.signOut().then(() => window.location.replace("index.html")); }
+    
+    function vincularNovo() {
+        alert("Para escalar, adicione o UID do novo cliente no nó 'clientes' do seu Realtime Database.");
+    }
 </script>
 </body>
 </html>
