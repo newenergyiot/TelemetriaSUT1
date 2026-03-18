@@ -2,123 +2,51 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NewEnergy | Histórico</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg-dark: #0b0f1b;
-  --card-bg: #161b2d;
-  --accent: #00d2ff;
-  --accent-hover: #0099cc;
-  --text-main: #ffffff;
-  --text-muted: #8fa3c6;
-}
-body {
-  margin:0; font-family:'Inter', sans-serif;
-  background: var(--bg-dark); color: var(--text-main);
-}
-header {
-  width:100%; padding:20px; background: var(--card-bg);
-  text-align:center; font-size:24px; font-weight:800;
-  box-shadow:0 4px 10px rgba(0,0,0,0.3);
-}
-main {
-  padding:20px; display:flex; flex-direction:column; gap:20px; align-items:center;
-}
-.card {
-  background: var(--card-bg); padding:20px; border-radius:16px;
-  width:100%; max-width:400px;
-}
-.card h3 { margin:0 0 10px; font-size:18px; }
-.card ul {
-  list-style:none; padding:0; margin:0; max-height:200px;
-  overflow-y:auto;
-}
-.card li { padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.1); }
-button {
-  padding:10px 20px; background:var(--accent); border:none;
-  border-radius:12px; color:#0b0f1b; cursor:pointer; font-weight:700;
-  margin-top:10px; transition:0.3s;
-}
-button:hover { background: var(--accent-hover); }
-@media(max-width:500px){
-  main { padding:10px; gap:15px; }
-  .card { width:95%; }
-}
+  body { background: #0b0f1b; color: #fff; font-family: 'Inter', sans-serif; padding: 20px; }
+  .container { max-width: 600px; margin: auto; }
+  .card { background: #161b2d; padding: 20px; border-radius: 15px; margin-bottom: 10px; }
+  ul { list-style: none; padding: 0; max-height: 300px; overflow-y: auto; }
+  li { padding: 8px; border-bottom: 1px solid #333; font-size: 13px; }
+  button { padding: 10px; background: #00d2ff; border: none; border-radius: 8px; cursor: pointer; }
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
 <body>
-
-<header>NewEnergy | Histórico</header>
-
-<main>
+<div class="container">
+  <h2>Histórico de Leituras</h2>
   <div class="card">
-    <h3>Leituras Diárias</h3>
-    <ul id="diario"></ul>
+    <ul id="listaHistorico"></ul>
   </div>
-
-  <div class="card">
-    <h3>Leituras Semanais</h3>
-    <ul id="semanal"></ul>
-  </div>
-
-  <div class="card">
-    <h3>Leituras Mensais</h3>
-    <ul id="mensal"></ul>
-  </div>
-
-  <div class="card">
-    <h3>Leituras Anuais</h3>
-    <ul id="anual"></ul>
-  </div>
-
-  <button onclick="window.location.href='painel.html'">Voltar ao Painel</button>
-</main>
+  <button onclick="window.location.href='painel.html'">Voltar</button>
+</div>
 
 <script>
 const firebaseConfig = {
   apiKey: "AIzaSyA7goJGQ7xBeBJX1ABMIkw8W0nyG1FaZG0",
   authDomain: "telemetriasut1.firebaseapp.com",
   databaseURL: "https://telemetriasut1-default-rtdb.firebaseio.com",
-  projectId: "telemetriasut1",
-  storageBucket: "telemetriasut1.firebasestorage.app",
-  messagingSenderId: "591416281880",
-  appId: "1:591416281880:web:4f9710b6bf1068767fec6d"
+  projectId: "telemetriasut1"
 };
-
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.database();
 
-const diarioEl = document.getElementById("diario");
-const semanalEl = document.getElementById("semanal");
-const mensalEl = document.getElementById("mensal");
-const anualEl = document.getElementById("anual");
+const params = new URLSearchParams(window.location.search);
+const uid = params.get("uid");
 
-// Verifica autenticação
-auth.onAuthStateChanged(user => {
-  if(!user) window.location.href = "index.html";
-  else loadHistorico(user.uid);
-});
-
-// Função para carregar histórico
-function loadHistorico(uid){
-  const tipos = ["diario","semanal","mensal","anual"];
-  tipos.forEach(t => {
-    const ref = db.ref("/clientes/" + uid + "/historico/" + t);
-    const el = document.getElementById(t);
-    ref.limitToLast(50).on("value", snap => {
-      el.innerHTML = "";
-      snap.forEach(s => {
-        const val = s.val();
-        let dt = new Date(parseInt(s.key)*1000);
-        let dataStr = dt.toLocaleDateString() + " " + dt.toLocaleTimeString();
-        el.innerHTML += `<li>${dataStr} — Temp: ${val.temp} °C, Hum: ${val.hum} %</li>`;
-      });
+if(uid) {
+  db.ref("/clientes/" + uid + "/historico/diario").limitToLast(20).on("value", snap => {
+    const list = document.getElementById("listaHistorico");
+    list.innerHTML = "";
+    snap.forEach(s => {
+      const v = s.val();
+      const li = document.createElement("li");
+      li.innerText = `Temp: ${v.temp}°C | Hum: ${v.hum}%`;
+      list.appendChild(li);
     });
   });
 }
